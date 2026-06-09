@@ -81,7 +81,7 @@ button { font-family: inherit; cursor: pointer; }
 /* ===== Controls ===== */
 .controls {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-2x);
-  padding: var(--spacing-4x); border-bottom: 1px solid var(--bg-neutral-2);
+  padding: var(--spacing-4x) var(--spacing-5x); border-bottom: 1px solid var(--bg-neutral-2);
 }
 .controls__group { display: flex; gap: var(--spacing-1-5x); align-items: center; }
 .controls__spacer { margin-left: auto; }
@@ -104,12 +104,13 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ===== Feed ===== */
 .day-head {
-  padding: var(--spacing-4x) var(--spacing-4x) var(--spacing-2x);
+  padding: var(--spacing-4x) var(--spacing-5x) var(--spacing-2x);
   color: var(--primitive-secondary);
 }
 .act-row { position: relative; }
 .act-row + .act-row { border-top: 1px solid var(--bg-neutral-1); }
-.act-row .ds-cell { padding-top: var(--spacing-3x); padding-bottom: var(--spacing-3x); }
+.act-row .ds-cell { padding: var(--spacing-3x) var(--spacing-5x); cursor: default; }
+.act-row .ds-cell:hover { opacity: 1; }
 .act-row:hover { background: var(--bg-neutral-1); }
 .act-row.susp { background: var(--bg-warning-1); }
 .act-row.susp:hover { background: var(--bg-warning-2); }
@@ -121,7 +122,7 @@ button { font-family: inherit; cursor: pointer; }
 .act-time { color: var(--primitive-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .act-reason-line {
   display: flex; align-items: center; gap: 6px; color: #8a6d12;
-  padding: 0 var(--spacing-4x) var(--spacing-3x) 68px; margin-top: -6px;
+  padding: 0 var(--spacing-5x) var(--spacing-3x) 76px; margin-top: -6px;
 }
 .empty { padding: var(--spacing-16x) var(--spacing-4x); text-align: center; color: var(--primitive-neutral-4); }
 
