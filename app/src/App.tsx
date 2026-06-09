@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   MainPageNavigationBar,
+  NavigationBar,
+  Widget,
   Avatar,
   Cell,
   Chip,
@@ -161,8 +163,7 @@ const ActionRow: React.FC<{ a: Action; marked: boolean; onToggle: (id: string) =
 };
 
 /* ===== Timeline ===== */
-const Timeline: React.FC<{ emp: Employee; marks: Set<string> }> = ({ emp, marks }) => {
-  const [range, setRange] = useState<'week' | 'month'>('week');
+const TimelineBody: React.FC<{ emp: Employee; marks: Set<string>; range: 'week' | 'month' }> = ({ emp, marks, range }) => {
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
   const daysBack = range === 'week' ? 7 : 30;
   const rows = useMemo(() => buildSegments(emp.actions, daysBack, marks), [emp, daysBack, marks]);
@@ -175,15 +176,7 @@ const Timeline: React.FC<{ emp: Employee; marks: Set<string> }> = ({ emp, marks 
   const HOURS = [0, 3, 6, 9, 12, 15, 18, 21, 24];
 
   return (
-    <div className="card">
-      <div className="tl-head">
-        <span className="ts-600-m">История рабочего времени</span>
-        <div className="controls__group">
-          <Chip variant="tab" isSelected={range === 'week'} onClick={() => setRange('week')}>Неделя</Chip>
-          <Chip variant="tab" isSelected={range === 'month'} onClick={() => setRange('month')}>Месяц</Chip>
-        </div>
-      </div>
-
+    <>
       <div className="tl-stats">
         <div className="stat"><div className="stat__lbl ts-400-xs">Среднее время в ИБ за день</div><div className="stat__val ts-600-xl">{fmt(avg)}</div></div>
         <div className="stat"><div className="stat__lbl ts-400-xs">Самый активный день</div><div className="stat__val ts-600-l">{best ? `${WD[best.date.getDay()]}, ${('0' + best.date.getDate()).slice(-2)}.${('0' + (best.date.getMonth() + 1)).slice(-2)} — ${fmt(best.d)}` : '—'}</div></div>
@@ -192,7 +185,7 @@ const Timeline: React.FC<{ emp: Employee; marks: Set<string> }> = ({ emp, marks 
 
       <div className="tl-grid">
         <div className="tl-axis">{HOURS.slice(0, -1).map((h) => <span key={h}>{('0' + h).slice(-2)}:00</span>)}</div>
-        <div className={range === 'month' ? 'tl-rows-scroll' : ''}>
+        <div>
           {rows.map((r, i) => (
             <div className="tl-row" key={i}>
               <div className="tl-row__lbl ts-400-xs"><b>{('0' + r.date.getDate()).slice(-2)}.{('0' + (r.date.getMonth() + 1)).slice(-2)}</b> {WD[r.date.getDay()]}</div>
@@ -219,7 +212,7 @@ const Timeline: React.FC<{ emp: Employee; marks: Set<string> }> = ({ emp, marks 
       </div>
 
       {tip && <div className="tl-tip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.text}</div>}
-    </div>
+    </>
   );
 };
 
@@ -235,6 +228,7 @@ const App: React.FC = () => {
   const [onlySusp, setOnlySusp] = useState(false);
   const [marks, setMarks] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<'feed' | 'timeline'>('feed');
+  const [tlRange, setTlRange] = useState<'week' | 'month'>('week');
 
   const emp = EMPLOYEES.find((e) => e.id === empId)!;
   const toggleMark = (id: string) => setMarks((prev) => {
@@ -276,7 +270,7 @@ const App: React.FC = () => {
   }, [filtered]);
 
   return (
-    <>
+    <div className="app-shell">
       <MainPageNavigationBar
         activeNavItem="services"
         customer="ИП Иванов И.А."
@@ -289,8 +283,15 @@ const App: React.FC = () => {
       <div className="layout">
         <Sidebar />
         <main className="main">
-          <h1 className="page-title ts-600-2xl">Мониторинг действий сотрудников</h1>
-          <p className="page-sub ts-400-s">Отслеживайте активность распорядителей в интернет-банке: действия, время работы и подозрительные события.</p>
+          <NavigationBar
+            isAdaptive={false}
+            className="mon-nav"
+            title="Мониторинг действий сотрудников"
+            description="Отслеживайте активность распорядителей в интернет-банке: действия, время работы и подозрительные события."
+            hasBackButton={false}
+            hasActionButton={false}
+            hasRootLink={false}
+          />
 
           <div className="emp-grid">
             {EMPLOYEES.map((e) => (
@@ -298,14 +299,30 @@ const App: React.FC = () => {
             ))}
           </div>
 
-          <div className="tabsrow">
-            <Chip variant="tab" isSelected={tab === 'feed'} onClick={() => setTab('feed')}>Лента действий</Chip>
-            <Chip variant="tab" isSelected={tab === 'timeline'} onClick={() => setTab('timeline')}>Рабочее время</Chip>
-          </div>
-
-          {tab === 'feed' ? (
-            <div className="card">
-              <div className="controls">
+          <Widget
+            className="mon-widget"
+            contentClassName="mon-content"
+            hasChevron={false}
+            hasDescription={false}
+            hasRightAccessory={tab === 'timeline'}
+            rightAccessory={
+              tab === 'timeline' ? (
+                <div className="controls__group">
+                  <Chip variant="tab" isSelected={tlRange === 'week'} onClick={() => setTlRange('week')}>Неделя</Chip>
+                  <Chip variant="tab" isSelected={tlRange === 'month'} onClick={() => setTlRange('month')}>Месяц</Chip>
+                </div>
+              ) : undefined
+            }
+            title={
+              <div className="tabsrow">
+                <Chip variant="tab" isSelected={tab === 'feed'} onClick={() => setTab('feed')}>Лента действий</Chip>
+                <Chip variant="tab" isSelected={tab === 'timeline'} onClick={() => setTab('timeline')}>Рабочее время</Chip>
+              </div>
+            }
+          >
+            {tab === 'feed' ? (
+              <>
+                <div className="controls">
                 <div className="controls__group">
                   {PERIODS.map(([v, l]) => (
                     <Chip key={v} variant="tab" isSelected={period === v} onClick={() => setPeriod(v)}>{l}</Chip>
@@ -331,25 +348,26 @@ const App: React.FC = () => {
                 </Chip>
               </div>
 
-              {groups.length === 0 ? (
-                <div className="empty ts-400-m">За выбранный период действий не найдено</div>
-              ) : (
-                groups.map((g, i) => (
-                  <div key={i}>
-                    <div className="day-head ts-500-s">{dayHead(g.date)}</div>
-                    {g.items.map((a) => (
-                      <ActionRow key={a.id} a={a} marked={marks.has(a.id)} onToggle={toggleMark} />
-                    ))}
-                  </div>
-                ))
-              )}
-            </div>
-          ) : (
-            <Timeline emp={emp} marks={marks} />
-          )}
+                {groups.length === 0 ? (
+                  <div className="empty ts-400-m">За выбранный период действий не найдено</div>
+                ) : (
+                  groups.map((g, i) => (
+                    <div key={i}>
+                      <div className="day-head ts-500-s">{dayHead(g.date)}</div>
+                      {g.items.map((a) => (
+                        <ActionRow key={a.id} a={a} marked={marks.has(a.id)} onToggle={toggleMark} />
+                      ))}
+                    </div>
+                  ))
+                )}
+              </>
+            ) : (
+              <TimelineBody emp={emp} marks={marks} range={tlRange} />
+            )}
+          </Widget>
         </main>
       </div>
-    </>
+    </div>
   );
 };
 
