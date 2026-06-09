@@ -113,14 +113,16 @@ button { font-family: inherit; cursor: pointer; }
 .act-row:hover { background: var(--bg-neutral-1); }
 .act-row.susp { background: var(--bg-warning-1); }
 .act-row.susp:hover { background: var(--bg-warning-2); }
-.act-right { display: flex; align-items: center; gap: var(--spacing-3x); }
+.act-right { display: flex; align-items: center; justify-content: flex-end; gap: var(--spacing-3x); }
+.act-meta { display: inline-flex; align-items: center; gap: var(--spacing-3x); }
+.act-mark { display: none; }
+.act-row:hover .act-meta { display: none; }
+.act-row:hover .act-mark { display: inline-flex; }
 .act-time { color: var(--primitive-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.act-reason { color: #8a6d12; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-.mark-btn {
-  position: absolute; right: var(--spacing-4x); top: 50%; transform: translateY(-50%);
-  opacity: 0; pointer-events: none; transition: opacity .1s; z-index: 5;
+.act-reason-line {
+  display: flex; align-items: center; gap: 6px; color: #8a6d12;
+  padding: 0 var(--spacing-4x) var(--spacing-3x) 68px; margin-top: -6px;
 }
-.act-row:hover .mark-btn { opacity: 1; pointer-events: auto; }
 .empty { padding: var(--spacing-16x) var(--spacing-4x); text-align: center; color: var(--primitive-neutral-4); }
 
 /* Тэги типов — лёгкая подкраска токенами ДС */

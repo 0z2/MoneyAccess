@@ -135,29 +135,27 @@ const ActionRow: React.FC<{ a: Action; marked: boolean; onToggle: (id: string) =
           />
         }
         title={<span className="ts-500-s">{a.label}</span>}
-        description={
-          <>
-            <span className="ts-400-xs">{a.detail}</span>
-            {reason && (
-              <span className="act-reason ts-400-xs">
-                <Icon icon={<WarningTriangle />} size="2xs" color="#c79a14" />
-                {reason}
-              </span>
-            )}
-          </>
-        }
+        description={<span className="ts-400-xs">{a.detail}</span>}
         rightAccessory={
           <div className="act-right">
-            <span className={`tag-tint tag-tint--${a.type} ts-500-xs`}>{TYPE_LABEL[a.type]}</span>
-            <span className="act-time ts-400-s">{hm(a.date)}</span>
+            <span className="act-meta">
+              <span className={`tag-tint tag-tint--${a.type} ts-500-xs`}>{TYPE_LABEL[a.type]}</span>
+              <span className="act-time ts-400-s">{hm(a.date)}</span>
+            </span>
+            <span className="act-mark">
+              <Chip variant="action" leftAccessory="icon" leftIcon={marked ? <Cross /> : <WarningTriangle />} onClick={() => onToggle(a.id)}>
+                {marked ? 'Снять пометку' : 'Пометить'}
+              </Chip>
+            </span>
           </div>
         }
       />
-      <div className="mark-btn">
-        <Chip variant="action" leftAccessory="icon" leftIcon={marked ? <Cross /> : <WarningTriangle />} onClick={() => onToggle(a.id)}>
-          {marked ? 'Снять пометку' : 'Пометить'}
-        </Chip>
-      </div>
+      {reason && (
+        <div className="act-reason-line ts-400-xs">
+          <Icon icon={<WarningTriangle />} size="2xs" color="#c79a14" />
+          <span>{reason}</span>
+        </div>
+      )}
     </div>
   );
 };
