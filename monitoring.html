@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Точка — Мониторинг действий сотрудников</title>
+
+<!-- Дизайн-система: шрифты -->
+<link rel="stylesheet" href="./design system/fonts.css" />
+
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<style>
+/* ===== Дизайн-токены (из дизайн-системы Точка) ===== */
+:root {
+  --primitive-primary: #191919;
+  --primitive-secondary: #676767;
+  --primitive-neutral-4: #949494;
+  --primitive-neutral-3: #c8c8c8;
+  --primitive-neutral-2: #d4d4d4;
+  --primitive-neutral-1: #e1e1e1;
+  --primitive-default: #ffffff;
+  --primitive-brand: #835de1;
+  --primitive-brand-on-inverse: #9b7ef1;
+  --primitive-error: #d84d4d;
+  --primitive-success: #5cad9a;
+  --primitive-warning: #f0c555;
+
+  --bg-neutral-3: #e1e1e1;
+  --bg-neutral-2: #eeeeee;
+  --bg-neutral-1: #f4f4f4;
+  --bg-default: #ffffff;
+  --bg-inverse: #191919;
+  --bg-brand: #835de1;
+  --bg-brand-2: #e2ddf6;
+  --bg-brand-1: #efedf8;
+  --bg-error-3: #ffc3be;
+  --bg-error-1: #f9ebea;
+  --bg-success-2: #c9eee3;
+  --bg-success-1: #ddf8ef;
+  --bg-warning-3: #fde2a2;
+  --bg-warning-2: #fbefd2;
+  --bg-warning-1: #fcf5e3;
+
+  --container-transparent-1: rgba(25,25,25,0.05);
+  --container-transparent-2: rgba(25,25,25,0.1);
+  --page-secondary: #f9f9f9;
+  --overlay-popup: rgba(25,25,25,0.4);
+
+  /* Spacings */
+  --spacing-0-5x:2px; --spacing-1x:4px; --spacing-1-5x:6px; --spacing-2x:8px;
+  --spacing-2-5x:10px; --spacing-3x:12px; --spacing-3-5x:14px; --spacing-4x:16px;
+  --spacing-5x:20px; --spacing-6x:24px; --spacing-8x:32px; --spacing-10x:40px;
+  --spacing-12x:48px; --spacing-16x:64px;
+
+  /* Roundings */
+  --rounding-1x:4px; --rounding-1-5x:6px; --rounding-2x:8px; --rounding-2-5x:10px;
+  --rounding-3x:12px; --rounding-4x:16px; --rounding-5x:20px; --rounding-6x:24px;
+  --rounding-10x:40px;
+
+  /* Typography */
+  --ttn-400-s-01-size:14px; --ttn-400-s-01-lh:18px;
+  --ttn-400-xs-01-size:12px; --ttn-400-xs-01-lh:15px;
+  --ttn-400-2xs-01-size:10px; --ttn-400-2xs-01-lh:13px;
+  --ttn-500-3xl-size:30px; --ttn-500-3xl-lh:36px;
+  --ttn-500-2xl-01-size:24px; --ttn-500-2xl-01-lh:30px;
+  --ttn-500-xl-01-size:20px; --ttn-500-xl-01-lh:26px;
+  --ttn-500-l-01-size:18px; --ttn-500-l-01-lh:22px;
+  --ttn-500-m-01-size:16px; --ttn-500-m-01-lh:20px;
+  --ttn-500-s-01-size:14px; --ttn-500-s-01-lh:18px;
+  --ttn-600-2xl-01-size:24px; --ttn-600-2xl-01-lh:30px;
+  --ttn-600-xl-01-size:20px; --ttn-600-xl-01-lh:26px;
+  --ttn-600-l-01-size:18px; --ttn-600-l-01-lh:22px;
+  --ttn-600-m-01-size:16px; --ttn-600-m-01-lh:20px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: 'TT Norms Pro Tochka', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--ttn-400-s-01-size);
+  line-height: var(--ttn-400-s-01-lh);
+  color: var(--primitive-primary);
+  background: var(--bg-neutral-1);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--primitive-neutral-2); border-radius: var(--rounding-10x); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== Header ===== */
+.hdr {
+  height: 60px; background: var(--bg-default);
+  border-bottom: 1px solid var(--primitive-neutral-1);
+  display: flex; align-items: center; padding: 0 var(--spacing-6x);
+  gap: var(--spacing-8x); position: sticky; top: 0; z-index: 50;
+}
+.hdr__logo { display: flex; align-items: center; gap: var(--spacing-2x); font-weight: 600;
+  font-size: var(--ttn-600-l-01-size); color: var(--primitive-primary); }
+.hdr__logo-dot { width: 22px; height: 22px; border-radius: var(--rounding-2x);
+  background: var(--bg-brand); display: inline-block; }
+.hdr__nav { display: flex; gap: var(--spacing-1x); }
+.hdr__nav a { padding: var(--spacing-2x) var(--spacing-3x); border-radius: var(--rounding-2x);
+  color: var(--primitive-secondary); text-decoration: none; font-size: var(--ttn-500-s-01-size);
+  font-weight: 500; }
+.hdr__nav a:hover { background: var(--container-transparent-1); color: var(--primitive-primary); }
+.hdr__nav a.active { color: var(--primitive-primary); }
+.hdr__right { margin-left: auto; display: flex; align-items: center; gap: var(--spacing-4x); }
+.hdr__user { display: flex; align-items: center; gap: var(--spacing-2x); font-weight: 500;
+  font-size: var(--ttn-500-s-01-size); }
+.hdr__avatar { width: 32px; height: 32px; border-radius: var(--rounding-10x);
+  background: var(--bg-brand-2); color: var(--primitive-brand); display: flex;
+  align-items: center; justify-content: center; font-weight: 600; font-size: var(--ttn-600-xs-01-size); }
+.hdr__icon { width: 36px; height: 36px; border-radius: var(--rounding-2x); display: flex;
+  align-items: center; justify-content: center; color: var(--primitive-secondary); font-size: 18px; }
+.hdr__icon:hover { background: var(--container-transparent-1); }
+
+/* ===== Layout ===== */
+.layout { display: flex; min-height: calc(100vh - 60px); }
+.sidebar { width: 248px; flex-shrink: 0; background: var(--bg-default);
+  border-right: 1px solid var(--primitive-neutral-1); padding: var(--spacing-6x) var(--spacing-3x); }
+.sidebar__title { font-size: var(--ttn-400-xs-01-size); text-transform: uppercase;
+  letter-spacing: .04em; color: var(--primitive-neutral-4); padding: 0 var(--spacing-3x);
+  margin-bottom: var(--spacing-3x); }
+.sidebar__item { display: flex; align-items: center; gap: var(--spacing-3x);
+  padding: var(--spacing-2-5x) var(--spacing-3x); border-radius: var(--rounding-2x);
+  color: var(--primitive-secondary); font-size: var(--ttn-500-s-01-size); font-weight: 500;
+  margin-bottom: var(--spacing-0-5x); cursor: pointer; }
+.sidebar__item:hover { background: var(--container-transparent-1); color: var(--primitive-primary); }
+.sidebar__item.active { background: var(--bg-brand-1); color: var(--primitive-brand); }
+.sidebar__ico { font-size: 16px; width: 18px; text-align: center; }
+
+.main { flex: 1; padding: var(--spacing-8x); min-width: 0; max-width: 1320px; }
+.page-title { font-size: var(--ttn-600-2xl-01-size); line-height: var(--ttn-600-2xl-01-lh);
+  font-weight: 600; margin-bottom: var(--spacing-1-5x); }
+.page-sub { color: var(--primitive-secondary); font-size: var(--ttn-400-s-01-size);
+  margin-bottom: var(--spacing-6x); }
+
+.card { background: var(--bg-default); border: 1px solid var(--primitive-neutral-1);
+  border-radius: var(--rounding-4x); box-shadow: 0 1px 2px rgba(25,25,25,0.04); }
+
+/* ===== Employee selector ===== */
+.emp-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-3x);
+  margin-bottom: var(--spacing-6x); }
+.emp-card { padding: var(--spacing-4x); border-radius: var(--rounding-3x);
+  border: 1.5px solid var(--primitive-neutral-1); background: var(--bg-default); cursor: pointer;
+  transition: border-color .12s, box-shadow .12s; }
+.emp-card:hover { border-color: var(--primitive-neutral-3); }
+.emp-card.active { border-color: var(--primitive-brand); box-shadow: 0 0 0 3px var(--bg-brand-1); }
+.emp-card__top { display: flex; align-items: center; gap: var(--spacing-2x); margin-bottom: var(--spacing-3x); }
+.emp-card__av { width: 38px; height: 38px; border-radius: var(--rounding-10x); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-weight: 600;
+  font-size: var(--ttn-600-s-01-size); }
+.emp-card__name { font-weight: 600; font-size: var(--ttn-600-s-01-size); line-height: 18px; }
+.emp-card__role { color: var(--primitive-secondary); font-size: var(--ttn-400-xs-01-size); margin-top: 1px; }
+.emp-card__status { display: flex; align-items: center; gap: var(--spacing-1-5x);
+  font-size: var(--ttn-400-xs-01-size); color: var(--primitive-secondary); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot--on { background: var(--primitive-success); box-shadow: 0 0 0 3px var(--bg-success-1); }
+.dot--off { background: var(--primitive-neutral-3); }
+.emp-card__now { margin-top: var(--spacing-2x); padding-top: var(--spacing-2x);
+  border-top: 1px dashed var(--primitive-neutral-1); font-size: var(--ttn-400-xs-01-size);
+  display: flex; align-items: center; gap: var(--spacing-1-5x); color: var(--primitive-primary); }
+.badge-sign { display: inline-block; font-size: var(--ttn-500-2xs-01-size, 10px); line-height: 12px;
+  font-weight: 500; padding: 2px 6px; border-radius: var(--rounding-1x); margin-top: 4px; }
+.badge-sign--yes { background: var(--bg-success-1); color: #2f7a69; }
+.badge-sign--no { background: var(--bg-neutral-2); color: var(--primitive-secondary); }
+
+/* ===== Controls ===== */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-3x);
+  padding: var(--spacing-4x); border-bottom: 1px solid var(--primitive-neutral-1); }
+.seg { display: inline-flex; background: var(--bg-neutral-1); border-radius: var(--rounding-2x); padding: 2px; }
+.seg button { padding: var(--spacing-1-5x) var(--spacing-3x); border-radius: var(--rounding-1-5x);
+  font-size: var(--ttn-500-s-01-size); font-weight: 500; color: var(--primitive-secondary); }
+.seg button.active { background: var(--bg-default); color: var(--primitive-primary);
+  box-shadow: 0 1px 2px rgba(25,25,25,0.08); }
+.date-input { display: flex; align-items: center; gap: var(--spacing-1-5x); }
+.date-input input { font-family: inherit; font-size: var(--ttn-400-s-01-size);
+  border: 1px solid var(--primitive-neutral-2); border-radius: var(--rounding-2x);
+  padding: var(--spacing-1-5x) var(--spacing-2x); color: var(--primitive-primary); }
+.dropdown { position: relative; }
+.btn-outline { display: inline-flex; align-items: center; gap: var(--spacing-2x);
+  border: 1px solid var(--primitive-neutral-2); border-radius: var(--rounding-2x);
+  padding: var(--spacing-1-5x) var(--spacing-3x); font-size: var(--ttn-500-s-01-size);
+  font-weight: 500; color: var(--primitive-primary); background: var(--bg-default); }
+.btn-outline:hover { border-color: var(--primitive-neutral-3); }
+.menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 220px;
+  background: var(--bg-default); border: 1px solid var(--primitive-neutral-1);
+  border-radius: var(--rounding-3x); box-shadow: 0 8px 24px rgba(25,25,25,0.12);
+  padding: var(--spacing-2x); }
+.menu label { display: flex; align-items: center; gap: var(--spacing-2x);
+  padding: var(--spacing-2x) var(--spacing-2x); border-radius: var(--rounding-2x);
+  font-size: var(--ttn-400-s-01-size); cursor: pointer; }
+.menu label:hover { background: var(--container-transparent-1); }
+.menu input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primitive-brand); }
+
+.susp-counter { margin-left: auto; display: inline-flex; align-items: center; gap: var(--spacing-2x);
+  padding: var(--spacing-1-5x) var(--spacing-3x); border-radius: var(--rounding-2x);
+  font-size: var(--ttn-500-s-01-size); font-weight: 500; cursor: pointer;
+  background: var(--bg-warning-1); color: #8a6d12; border: 1px solid var(--bg-warning-3); }
+.susp-counter:hover { background: var(--bg-warning-2); }
+.susp-counter.active { background: var(--bg-warning-3); color: #6b540a; }
+
+/* ===== Feed ===== */
+.day-head { padding: var(--spacing-4x) var(--spacing-4x) var(--spacing-2x);
+  font-size: var(--ttn-500-s-01-size); font-weight: 600; color: var(--primitive-secondary);
+  position: sticky; top: 60px; background: var(--bg-default); }
+.act { display: grid; grid-template-columns: 36px 1fr auto auto; align-items: center;
+  gap: var(--spacing-3x); padding: var(--spacing-3x) var(--spacing-4x);
+  border-top: 1px solid var(--primitive-neutral-1); position: relative; }
+.act:hover { background: var(--bg-neutral-1); }
+.act.susp { background: var(--bg-warning-1); }
+.act.susp:hover { background: var(--bg-warning-2); }
+.act__ico { width: 36px; height: 36px; border-radius: var(--rounding-2x);
+  background: var(--bg-neutral-1); display: flex; align-items: center; justify-content: center;
+  font-size: 17px; }
+.act.susp .act__ico { background: var(--bg-warning-2); }
+.act__main { min-width: 0; }
+.act__label { font-weight: 500; font-size: var(--ttn-500-s-01-size); display: flex;
+  align-items: center; gap: var(--spacing-2x); }
+.act__detail { color: var(--primitive-secondary); font-size: var(--ttn-400-xs-01-size); margin-top: 1px; }
+.act__susp-reason { color: #8a6d12; font-size: var(--ttn-400-xs-01-size); margin-top: 2px;
+  display: flex; align-items: center; gap: 4px; }
+.act__time { color: var(--primitive-secondary); font-size: var(--ttn-400-s-01-size);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tag { font-size: var(--ttn-500-2xs-01-size, 10px); line-height: 14px; font-weight: 500;
+  padding: 3px 8px; border-radius: var(--rounding-1x); white-space: nowrap; }
+.act__mark { position: absolute; right: var(--spacing-4x); top: 50%; transform: translateY(-50%);
+  opacity: 0; display: inline-flex; align-items: center; gap: 4px;
+  background: var(--bg-default); border: 1px solid var(--primitive-neutral-2);
+  border-radius: var(--rounding-2x); padding: var(--spacing-1x) var(--spacing-2x);
+  font-size: var(--ttn-500-xs-01-size, 12px); font-weight: 500; color: var(--primitive-primary);
+  box-shadow: 0 2px 6px rgba(25,25,25,0.1); }
+.act:hover .act__mark { opacity: 1; }
+.act__mark:hover { border-color: var(--primitive-warning); color: #8a6d12; }
+.act__mark.unmark:hover { border-color: var(--primitive-neutral-3); color: var(--primitive-secondary); }
+.empty { padding: var(--spacing-16x) var(--spacing-4x); text-align: center;
+  color: var(--primitive-neutral-4); }
+
+.tip { position: relative; display: inline-flex; }
+.tip__bubble { visibility: hidden; opacity: 0; position: absolute; bottom: calc(100% + 6px);
+  left: 50%; transform: translateX(-50%); background: var(--bg-inverse); color: #fff;
+  font-size: var(--ttn-400-xs-01-size); font-weight: 400; padding: var(--spacing-1-5x) var(--spacing-2-5x);
+  border-radius: var(--rounding-2x); white-space: nowrap; z-index: 60; pointer-events: none;
+  transition: opacity .1s; box-shadow: 0 4px 12px rgba(25,25,25,0.2); }
+.tip:hover .tip__bubble { visibility: visible; opacity: 1; }
+
+/* ===== Section tabs ===== */
+.tabs { display: inline-flex; gap: var(--spacing-1x); margin-bottom: var(--spacing-4x);
+  background: var(--bg-neutral-1); padding: 3px; border-radius: var(--rounding-2-5x); }
+.tabs button { padding: var(--spacing-2x) var(--spacing-4x); border-radius: var(--rounding-2x);
+  font-size: var(--ttn-500-s-01-size); font-weight: 500; color: var(--primitive-secondary); }
+.tabs button.active { background: var(--bg-default); color: var(--primitive-primary);
+  box-shadow: 0 1px 2px rgba(25,25,25,0.08); }
+
+/* ===== Timeline ===== */
+.tl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-3x);
+  margin-bottom: var(--spacing-6x); }
+.stat { padding: var(--spacing-4x); border-radius: var(--rounding-3x);
+  background: var(--bg-neutral-1); }
+.stat__lbl { font-size: var(--ttn-400-xs-01-size); color: var(--primitive-secondary); }
+.stat__val { font-size: var(--ttn-600-xl-01-size); font-weight: 600; margin-top: var(--spacing-1x); }
+.tl-grid { padding: var(--spacing-2x) var(--spacing-4x) var(--spacing-4x); }
+.tl-axis { display: flex; margin-left: 72px; border-bottom: 1px solid var(--primitive-neutral-1);
+  padding-bottom: var(--spacing-1x); margin-bottom: var(--spacing-2x); }
+.tl-axis span { flex: 1; font-size: var(--ttn-400-2xs-01-size); color: var(--primitive-neutral-4);
+  text-align: left; }
+.tl-row { display: flex; align-items: center; height: 30px; }
+.tl-row__lbl { width: 72px; flex-shrink: 0; font-size: var(--ttn-400-xs-01-size);
+  color: var(--primitive-secondary); font-variant-numeric: tabular-nums; }
+.tl-row__lbl b { color: var(--primitive-primary); font-weight: 500; }
+.tl-track { position: relative; flex: 1; height: 18px; background: var(--bg-neutral-1);
+  border-radius: var(--rounding-1x); overflow: hidden; }
+.tl-track__grid { position: absolute; inset: 0; }
+.tl-track__grid i { position: absolute; top: 0; bottom: 0; width: 1px;
+  background: rgba(25,25,25,0.04); }
+.tl-seg { position: absolute; top: 0; bottom: 0; border-radius: var(--rounding-1x);
+  background: var(--primitive-brand); cursor: pointer; min-width: 3px; }
+.tl-seg:hover { filter: brightness(1.08); }
+.tl-seg--susp { background: var(--primitive-warning); }
+.tl-legend { display: flex; gap: var(--spacing-5x); margin-top: var(--spacing-4x);
+  font-size: var(--ttn-400-xs-01-size); color: var(--primitive-secondary); }
+.tl-legend span { display: inline-flex; align-items: center; gap: var(--spacing-1-5x); }
+.tl-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+@media (max-width: 1100px) {
+  .emp-row { grid-template-columns: repeat(2, 1fr); }
+  .tl-stats { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useRef, useEffect } = React;
+
+/* ============ Конфигурация типов ============ */
+const TYPES = {
+  auth:      { label: 'Авторизация', icon: '🔑', tagBg: 'var(--bg-neutral-2)',   tagFg: 'var(--primitive-secondary)' },
+  view:      { label: 'Просмотр',    icon: '👁', tagBg: 'var(--bg-brand-1)',     tagFg: 'var(--primitive-brand)' },
+  payment:   { label: 'Платёж',      icon: '💳', tagBg: 'var(--bg-success-1)',   tagFg: '#2f7a69' },
+  settings:  { label: 'Настройки',   icon: '⚙️', tagBg: 'var(--bg-neutral-2)',   tagFg: 'var(--primitive-secondary)' },
+  documents: { label: 'Документы',   icon: '📄', tagBg: 'var(--bg-brand-1)',     tagFg: 'var(--primitive-brand)' },
+  export:    { label: 'Экспорт',     icon: '📥', tagBg: 'var(--bg-warning-1)',   tagFg: '#8a6d12' },
+};
+const TYPE_ORDER = ['auth','view','payment','settings','documents','export'];
+
+/* ============ Дата-утилиты ============ */
+const NOW = new Date(2026, 5, 9, 17, 50); // 9 июня 2026, вт
+const WD = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const pad = (n) => String(n).padStart(2, '0');
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const dmy = (d) => `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+const hm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const hmFloat = (h) => `${pad(Math.floor(h))}:${pad(Math.round((h%1)*60))}`;
+const dayOffset = (n) => { const d = new Date(NOW); d.setHours(0,0,0,0); d.setDate(d.getDate()-n); return d; };
+function dayHead(d) {
+  const t = dayOffset(0), y = dayOffset(1);
+  let prefix = '';
+  if (ymd(d) === ymd(t)) prefix = 'Сегодня, ';
+  else if (ymd(d) === ymd(y)) prefix = 'Вчера, ';
+  return `${prefix}${WD[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/* ============ PRNG (для стабильных мок-данных) ============ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ============ Шаблоны действий ============ */
+const POOL = {
+  auth: [
+    ['Вход в интернет-банк', 'Десктоп, Москва'],
+    ['Выход из интернет-банка', 'Десктоп, Москва'],
+    ['Вход в интернет-банк', 'Мобильное устройство, Московская область'],
+  ],
+  view: [
+    ['Просмотр выписки по счёту', 'Счёт •• 5402'],
+    ['Просмотр истории операций', 'Период: текущий месяц'],
+    ['Просмотр контрагентов', 'ООО «Ромашка»'],
+    ['Просмотр баланса по счетам', '3 счёта'],
+    ['Просмотр входящих платежей', 'За сегодня'],
+  ],
+  payment: [
+    ['Создание платежа по реквизитам', 'ООО «Ромашка», 45 000 ₽'],
+    ['Платёж контрагенту', 'ИП Соколов, 12 300 ₽'],
+    ['Оплата налога', 'НДФЛ, 89 200 ₽'],
+    ['Создание платежа по реквизитам', 'ООО «ТехСнаб», 7 800 ₽'],
+  ],
+  settings: [
+    ['Изменение настроек уведомлений', 'Email-уведомления'],
+    ['Просмотр настроек профиля', '—'],
+  ],
+  documents: [
+    ['Работа в онлайн-бухгалтерии', 'УСН, 2 кв. 2026'],
+    ['Заполнение КУДиР', 'Книга учёта доходов и расходов'],
+    ['Формирование декларации', 'Декларация по УСН'],
+  ],
+  export: [
+    ['Экспорт выписки', 'PDF'],
+    ['Выгрузка в 1С', '1C, период: май 2026'],
+  ],
+};
+// Распределение типов в течение дня для бухгалтера
+const WEIGHTS = ['view','view','view','payment','view','documents','payment','view','export','view','documents','view'];
+
+/* ============ Генерация действий ============ */
+let UID = 0;
+function genDay(rnd, date, count, suspList) {
+  const acts = [];
+  // утренний вход
+  const inH = 8.6 + rnd()*0.8;
+  acts.push(mkAct(date, inH, 'auth', POOL.auth[0]));
+  // дневная активность 9:00–18:00
+  for (let i=0;i<count;i++){
+    const h = 9 + rnd()*8.5;
+    const t = WEIGHTS[Math.floor(rnd()*WEIGHTS.length)];
+    const tpl = POOL[t][Math.floor(rnd()*POOL[t].length)];
+    acts.push(mkAct(date, h, t, tpl));
+  }
+  // обеденный выход/вход
+  acts.push(mkAct(date, 13 + rnd()*0.5, 'auth', POOL.auth[1]));
+  acts.push(mkAct(date, 13.7 + rnd()*0.4, 'auth', POOL.auth[0]));
+  // вечерний выход
+  acts.push(mkAct(date, 17.7 + rnd()*0.6, 'auth', POOL.auth[1]));
+  // встроенные подозрительные
+  (suspList||[]).forEach(s => acts.push(s(date)));
+  acts.sort((a,b)=>a.t-b.t);
+  return acts;
+}
+function mkAct(date, hour, type, tpl, susp) {
+  const d = new Date(date);
+  d.setHours(Math.floor(hour), Math.round((hour%1)*60), 0, 0);
+  return {
+    id: 'a'+(UID++),
+    t: d.getTime(),
+    date: d,
+    type,
+    label: tpl[0],
+    detail: tpl[1],
+    susp: susp || null,
+  };
+}
+
+/* ============ Построение данных по сотруднику ============ */
+function buildPetrova() {
+  const rnd = mulberry32(101);
+  let all = [];
+  // 30 дней; последние 7 — насыщенные, ранее — легче
+  for (let off=29; off>=0; off--) {
+    const date = dayOffset(off);
+    const dow = date.getDay();
+    const weekend = (dow===0 || dow===6);
+    if (weekend) {
+      if (rnd() < 0.5) continue; // часто выходной
+      all = all.concat(genDay(rnd, date, 2 + Math.floor(rnd()*3), null));
+      continue;
+    }
+    const heavy = off <= 6;
+    const count = heavy ? (15 + Math.floor(rnd()*9)) : (6 + Math.floor(rnd()*6));
+    let susp = null;
+    if (off === 0) {
+      // сегодня: массовые операции
+      susp = [(date)=>{
+        const a = mkAct(date, 11.02, 'payment', ['Массовая отправка платежей','12 платежей за 3 минуты'],
+          'Массовые операции: 12 платежей за 3 минуты (нетипично для пользователя)');
+        return a;
+      }];
+    } else if (off === 1) {
+      // вчера: вход в нерабочее время 02:47
+      susp = [(date)=>mkAct(date, 2.78, 'auth', ['Вход в интернет-банк','Десктоп, Москва'],
+        'Авторизация в 02:47 — вход в нерабочее время')];
+    } else if (off === 4) {
+      // вход из нового региона
+      susp = [(date)=>mkAct(date, 9.4, 'auth', ['Вход в интернет-банк','Десктоп, Новосибирская область'],
+        'Вход из Новосибирской области (обычный регион: Москва и МО)')];
+    }
+    all = all.concat(genDay(rnd, date, count, susp));
+  }
+  return all;
+}
+
+function buildSimple(seed, region, days) {
+  const rnd = mulberry32(seed);
+  let all = [];
+  days.forEach(off => {
+    const date = dayOffset(off);
+    all = all.concat(genDay(rnd, date, 4 + Math.floor(rnd()*4), null));
+  });
+  return all;
+}
+
+/* ============ Сотрудники ============ */
+const EMPLOYEES = [
+  {
+    id: 'petrova', name: 'Петрова Анна Сергеевна', initials: 'ПА', color: 'var(--primitive-brand)',
+    role: 'Бухгалтер', sign: false, online: true,
+    current: { label: 'Платежи → По реквизитам', icon: '💳' },
+    actions: buildPetrova(),
+  },
+  {
+    id: 'kozlov', name: 'Козлов Дмитрий Игоревич', initials: 'КД', color: '#529da9',
+    role: 'Финансовый директор', sign: true, online: true,
+    current: { label: 'Аналитика', icon: '📊' },
+    actions: buildSimple(202, 'Москва', [0,1,2]),
+  },
+  {
+    id: 'sidorova', name: 'Сидорова Елена Владимировна', initials: 'СЕ', color: '#de9c7e',
+    role: 'Помощник', sign: false, online: false,
+    lastVisit: new Date(2026,5,9,14,23),
+    actions: buildSimple(303, 'Москва', [0,1]),
+  },
+  {
+    id: 'novikov', name: 'Новиков Алексей Петрович', initials: 'НА', color: '#91c089',
+    role: 'Бухгалтер', sign: false, online: false,
+    lastVisit: new Date(2026,5,8,18,1),
+    actions: buildSimple(404, 'Москва', [1,2]),
+  },
+];
+
+/* ============ Кластеризация для таймлайна ============ */
+function buildSegments(actions, daysBack) {
+  const byDay = {};
+  actions.forEach(a => {
+    const key = ymd(a.date);
+    (byDay[key] = byDay[key] || []).push(a);
+  });
+  const rows = [];
+  for (let off=0; off<daysBack; off++) {
+    const date = dayOffset(off);
+    const key = ymd(date);
+    const acts = (byDay[key] || []).slice().sort((a,b)=>a.t-b.t);
+    const segs = [];
+    if (acts.length) {
+      let start = acts[0].date.getHours()+acts[0].date.getMinutes()/60;
+      let end = start;
+      let cnt = 0, susp = 0;
+      const flush = () => segs.push({ start, end: Math.min(24, end+0.25), cnt, susp });
+      acts.forEach((a,i) => {
+        const h = a.date.getHours()+a.date.getMinutes()/60;
+        if (i>0 && h - end > 0.75) { flush(); start=h; cnt=0; susp=0; }
+        end = h; cnt++; if (a.susp) susp++;
+      });
+      flush();
+    }
+    rows.push({ date, segs });
+  }
+  return rows;
+}
+
+/* ============ Компоненты ============ */
+function Header() {
+  return (
+    <header className="hdr">
+      <div className="hdr__logo"><span className="hdr__logo-dot"></span>Точка</div>
+      <nav className="hdr__nav">
+        <a href="#">Главная</a>
+        <a href="#">Платежи</a>
+        <a href="#" className="active">Сервисы</a>
+      </nav>
+      <div className="hdr__right">
+        <div className="hdr__icon" title="Уведомления">🔔</div>
+        <div className="hdr__icon" title="Настройки">⚙️</div>
+        <div className="hdr__user">
+          <div className="hdr__avatar">ИИ</div>
+          <span>Иванов И.А., ИП</span>
+        </div>
+        <div className="hdr__icon" title="Выход">⎋</div>
+      </div>
+    </header>
+  );
+}
+
+function Sidebar() {
+  const items = [
+    { ico:'👥', label:'Доступы' },
+    { ico:'📡', label:'Мониторинг', active:true },
+    { ico:'🔌', label:'Интеграции и API' },
+    { ico:'🧮', label:'Подключить 1С' },
+  ];
+  return (
+    <aside className="sidebar">
+      <div className="sidebar__title">Доступы</div>
+      {items.map((it,i)=>(
+        <div key={i} className={'sidebar__item'+(it.active?' active':'')}>
+          <span className="sidebar__ico">{it.ico}</span>{it.label}
+        </div>
+      ))}
+    </aside>
+  );
+}
+
+function EmployeeCard({ emp, active, onClick }) {
+  return (
+    <div className={'emp-card'+(active?' active':'')} onClick={onClick}>
+      <div className="emp-card__top">
+        <div className="emp-card__av" style={{background:'var(--bg-brand-2)', color: emp.color}}>{emp.initials}</div>
+        <div style={{minWidth:0}}>
+          <div className="emp-card__name">{emp.name.split(' ').slice(0,2).join(' ')}</div>
+          <div className="emp-card__role">{emp.role}</div>
+        </div>
+      </div>
+      <div className="emp-card__status">
+        <span className={'dot '+(emp.online?'dot--on':'dot--off')}></span>
+        {emp.online ? 'Онлайн' : 'Офлайн'}
+      </div>
+      <span className={'badge-sign '+(emp.sign?'badge-sign--yes':'badge-sign--no')}>
+        {emp.sign ? '✓ С правом подписи' : 'Без права подписи'}
+      </span>
+      <div className="emp-card__now">
+        {emp.online
+          ? <><span>{emp.current.icon}</span><span>Сейчас: {emp.current.label}</span></>
+          : <span style={{color:'var(--primitive-secondary)'}}>Последний визит: {dmy(emp.lastVisit)}, {hm(emp.lastVisit)}</span>}
+      </div>
+    </div>
+  );
+}
+
+function Tag({ type }) {
+  const t = TYPES[type];
+  return <span className="tag" style={{background:t.tagBg, color:t.tagFg}}>{t.label}</span>;
+}
+
+function ActionRow({ a, marked, onToggle }) {
+  const isSusp = !!a.susp || marked;
+  const reason = a.susp || (marked ? 'Помечено вручную как подозрительное' : null);
+  return (
+    <div className={'act'+(isSusp?' susp':'')}>
+      <div className="act__ico">{TYPES[a.type].icon}</div>
+      <div className="act__main">
+        <div className="act__label">
+          {isSusp && <span>⚠️</span>}
+          {a.label}
+        </div>
+        <div className="act__detail">{a.detail}</div>
+        {reason && <div className="act__susp-reason">{reason}</div>}
+      </div>
+      <Tag type={a.type} />
+      <div className="act__time">{hm(a.date)}</div>
+      <button
+        className={'act__mark'+(marked?' unmark':'')}
+        onClick={()=>onToggle(a.id)}
+      >
+        {marked ? '✕ Снять пометку' : '⚠️ Пометить'}
+      </button>
+    </div>
+  );
+}
+
+function TypeFilter({ selected, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(()=>{
+    const h = (e)=>{ if(ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return ()=>document.removeEventListener('mousedown', h);
+  },[]);
+  const count = selected.length;
+  const lbl = count===0 || count===TYPE_ORDER.length ? 'Все типы' : `Типы: ${count}`;
+  const toggle = (t)=>{
+    const set = new Set(selected);
+    set.has(t) ? set.delete(t) : set.add(t);
+    onChange([...set]);
+  };
+  return (
+    <div className="dropdown" ref={ref}>
+      <button className="btn-outline" onClick={()=>setOpen(o=>!o)}>
+        🏷 {lbl} <span style={{color:'var(--primitive-neutral-4)'}}>▾</span>
+      </button>
+      {open && (
+        <div className="menu">
+          {TYPE_ORDER.map(t=>(
+            <label key={t}>
+              <input type="checkbox" checked={selected.includes(t)} onChange={()=>toggle(t)} />
+              <span>{TYPES[t].icon}</span> {TYPES[t].label}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Timeline({ emp, marks }) {
+  const [range, setRange] = useState('week');
+  const [tip, setTip] = useState(null);
+  const daysBack = range==='week' ? 7 : 30;
+  const rows = useMemo(()=>buildSegments(emp.actions, daysBack), [emp, daysBack]);
+  // отметить сегменты как подозрительные если содержат вручную помеченные действия
+  const segRows = rows.map(r=>({
+    ...r,
+    segs: r.segs.map(s=>{
+      const segActs = emp.actions.filter(a=>ymd(a.date)===ymd(r.date) &&
+        (a.date.getHours()+a.date.getMinutes()/60) >= s.start-0.01 &&
+        (a.date.getHours()+a.date.getMinutes()/60) <= s.end+0.01);
+      const manualSusp = segActs.filter(a=>marks.has(a.id)).length;
+      return { ...s, susp: s.susp + manualSusp };
+    })
+  }));
+
+  // статистика
+  const activeDays = segRows.filter(r=>r.segs.length);
+  const dayDur = activeDays.map(r=>({ date:r.date, dur: r.segs.reduce((s,x)=>s+(x.end-x.start),0) }));
+  const avg = dayDur.length ? dayDur.reduce((s,x)=>s+x.dur,0)/dayDur.length : 0;
+  const best = dayDur.slice().sort((a,b)=>b.dur-a.dur)[0];
+  const fmtDur = (h)=>`${Math.floor(h)}ч ${Math.round((h%1)*60)}мин`;
+
+  const HOURS = [0,3,6,9,12,15,18,21,24];
+
+  return (
+    <div className="card" style={{padding:'var(--spacing-2x) 0 0'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'var(--spacing-4x)'}}>
+        <div style={{fontWeight:600,fontSize:'var(--ttn-600-m-01-size)'}}>История рабочего времени</div>
+        <div className="seg">
+          <button className={range==='week'?'active':''} onClick={()=>setRange('week')}>Неделя</button>
+          <button className={range==='month'?'active':''} onClick={()=>setRange('month')}>Месяц</button>
+        </div>
+      </div>
+
+      <div style={{padding:'0 var(--spacing-4x)'}}>
+        <div className="tl-stats">
+          <div className="stat"><div className="stat__lbl">Среднее время в ИБ за день</div><div className="stat__val">{fmtDur(avg)}</div></div>
+          <div className="stat"><div className="stat__lbl">Самый активный день</div><div className="stat__val" style={{fontSize:'var(--ttn-600-l-01-size)'}}>{best?`${WD[best.date.getDay()]}, ${pad(best.date.getDate())}.${pad(best.date.getMonth()+1)} — ${fmtDur(best.dur)}`:'—'}</div></div>
+          <div className="stat"><div className="stat__lbl">Обычные часы работы</div><div className="stat__val">9:00–18:00</div></div>
+        </div>
+      </div>
+
+      <div className="tl-grid">
+        <div className="tl-axis">
+          {HOURS.slice(0,-1).map(h=><span key={h}>{pad(h)}:00</span>)}
+        </div>
+        <div style={{maxHeight: range==='month'?'420px':'none', overflowY: range==='month'?'auto':'visible'}}>
+          {segRows.map((r,i)=>(
+            <div className="tl-row" key={i}>
+              <div className="tl-row__lbl"><b>{pad(r.date.getDate())}.{pad(r.date.getMonth()+1)}</b> {WD[r.date.getDay()]}</div>
+              <div className="tl-track">
+                <div className="tl-track__grid">
+                  {HOURS.map(h=><i key={h} style={{left:(h/24*100)+'%'}}></i>)}
+                </div>
+                {r.segs.map((s,j)=>(
+                  <div key={j}
+                    className={'tl-seg'+(s.susp?' tl-seg--susp':'')}
+                    style={{left:(s.start/24*100)+'%', width:((s.end-s.start)/24*100)+'%'}}
+                    onMouseEnter={(e)=>setTip({x:e.clientX, y:e.clientY, s, date:r.date})}
+                    onMouseMove={(e)=>setTip({x:e.clientX, y:e.clientY, s, date:r.date})}
+                    onMouseLeave={()=>setTip(null)}
+                  ></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="tl-legend">
+          <span><i style={{background:'var(--primitive-brand)'}}></i> Активность в ИБ</span>
+          <span><i style={{background:'var(--primitive-warning)'}}></i> Период с подозрительными действиями</span>
+        </div>
+      </div>
+
+      {tip && (
+        <div style={{position:'fixed', left:tip.x+12, top:tip.y+12, zIndex:100,
+          background:'var(--bg-inverse)', color:'#fff', fontSize:'var(--ttn-400-xs-01-size)',
+          padding:'var(--spacing-1-5x) var(--spacing-2-5x)', borderRadius:'var(--rounding-2x)',
+          pointerEvents:'none', boxShadow:'0 4px 12px rgba(25,25,25,0.25)', whiteSpace:'nowrap'}}>
+          {hmFloat(tip.s.start)}–{hmFloat(tip.s.end)}, {tip.s.cnt} действ.{tip.s.susp?`, ${tip.s.susp} подозрит.`:''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function App() {
+  const [empId, setEmpId] = useState('petrova');
+  const [period, setPeriod] = useState('week'); // today|yesterday|week|month|custom
+  const [customFrom, setCustomFrom] = useState(ymd(dayOffset(6)));
+  const [customTo, setCustomTo] = useState(ymd(dayOffset(0)));
+  const [types, setTypes] = useState([]); // [] = все
+  const [onlySusp, setOnlySusp] = useState(false);
+  const [marks, setMarks] = useState(new Set());
+  const [tab, setTab] = useState('feed'); // feed|timeline
+
+  const emp = EMPLOYEES.find(e=>e.id===empId);
+
+  const toggleMark = (id) => setMarks(prev=>{
+    const s = new Set(prev); s.has(id)?s.delete(id):s.add(id); return s;
+  });
+
+  // диапазон периода
+  const range = useMemo(()=>{
+    if (period==='today') return [dayOffset(0), NOW];
+    if (period==='yesterday') return [dayOffset(1), dayOffset(0)];
+    if (period==='week') return [dayOffset(6), NOW];
+    if (period==='month') return [dayOffset(29), NOW];
+    const f = new Date(customFrom+'T00:00:00'); const t = new Date(customTo+'T23:59:59');
+    return [f, t];
+  }, [period, customFrom, customTo]);
+
+  const isSusp = (a) => !!a.susp || marks.has(a.id);
+
+  const filtered = useMemo(()=>{
+    const [from, to] = range;
+    return emp.actions.filter(a=>{
+      if (a.date < from || a.date > to) return false;
+      if (types.length && !types.includes(a.type)) return false;
+      if (onlySusp && !isSusp(a)) return false;
+      return true;
+    }).sort((a,b)=>b.t-a.t);
+  }, [emp, range, types, onlySusp, marks]);
+
+  const suspCount = useMemo(()=>{
+    const [from, to] = range;
+    return emp.actions.filter(a=>a.date>=from && a.date<=to && isSusp(a)).length;
+  }, [emp, range, marks]);
+
+  // группировка по дням
+  const groups = useMemo(()=>{
+    const m = new Map();
+    filtered.forEach(a=>{
+      const k = ymd(a.date);
+      if(!m.has(k)) m.set(k, { date: a.date, items: [] });
+      m.get(k).items.push(a);
+    });
+    return [...m.values()];
+  }, [filtered]);
+
+  return (
+    <>
+      <Header />
+      <div className="layout">
+        <Sidebar />
+        <main className="main">
+          <h1 className="page-title">Мониторинг действий сотрудников</h1>
+          <p className="page-sub">Отслеживайте активность распорядителей в интернет-банке: действия, время работы и подозрительные события.</p>
+
+          <div className="emp-row">
+            {EMPLOYEES.map(e=>(
+              <EmployeeCard key={e.id} emp={e} active={e.id===empId} onClick={()=>{setEmpId(e.id); setOnlySusp(false);}} />
+            ))}
+          </div>
+
+          <div className="tabs">
+            <button className={tab==='feed'?'active':''} onClick={()=>setTab('feed')}>Лента действий</button>
+            <button className={tab==='timeline'?'active':''} onClick={()=>setTab('timeline')}>Рабочее время</button>
+          </div>
+
+          {tab==='feed' && (
+            <div className="card">
+              <div className="controls">
+                <div className="seg">
+                  {[['today','Сегодня'],['yesterday','Вчера'],['week','Неделя'],['month','Месяц']].map(([v,l])=>(
+                    <button key={v} className={period===v?'active':''} onClick={()=>setPeriod(v)}>{l}</button>
+                  ))}
+                </div>
+                <div className="date-input">
+                  <input type="date" value={customFrom} onChange={e=>{setCustomFrom(e.target.value); setPeriod('custom');}} />
+                  <span style={{color:'var(--primitive-neutral-4)'}}>—</span>
+                  <input type="date" value={customTo} onChange={e=>{setCustomTo(e.target.value); setPeriod('custom');}} />
+                </div>
+                <TypeFilter selected={types} onChange={setTypes} />
+                <div
+                  className={'susp-counter'+(onlySusp?' active':'')}
+                  onClick={()=>setOnlySusp(s=>!s)}
+                  title="Показать только подозрительные"
+                >
+                  ⚠️ {suspCount} подозрительных {onlySusp && '· сбросить'}
+                </div>
+              </div>
+
+              {groups.length===0 ? (
+                <div className="empty">За выбранный период действий не найдено</div>
+              ) : groups.map((g,i)=>(
+                <div key={i}>
+                  <div className="day-head">{dayHead(g.date)}</div>
+                  {g.items.map(a=>(
+                    <ActionRow key={a.id} a={a} marked={marks.has(a.id)} onToggle={toggleMark} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab==='timeline' && <Timeline emp={emp} marks={marks} />}
+
+          <div style={{height:'var(--spacing-12x)'}}></div>
+        </main>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
