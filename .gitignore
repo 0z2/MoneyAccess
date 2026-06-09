@@ -1,0 +1,17 @@
+# Зависимости
+node_modules/
+**/node_modules/
+
+# Системные
+.DS_Store
+**/.DS_Store
+
+# Логи
+*.log
+npm-debug.log*
+
+# Vite временные файлы
+*.timestamp-*.mjs
+
+# Локальный клон дизайн-системы (не нужен для сайта; исходники лежат в «design system/»)
+t-ds/
