@@ -174,6 +174,18 @@ button { font-family: inherit; cursor: pointer; }
 
 .team-card { margin-top: var(--spacing-6x); }
 
+/* ===== Устройства ===== */
+.device-row {
+  display: flex; align-items: center; gap: var(--spacing-3x);
+  padding: var(--spacing-3x) var(--spacing-5x);
+  border-top: 1px solid var(--bg-neutral-1);
+}
+.device-row.deviation { background: var(--bg-warning-1); }
+.device-row__body { flex: 1; min-width: 0; }
+.device-row__sub { color: var(--primitive-secondary); margin-top: 2px; }
+.device-row__flag { color: #8a6d12; }
+.device-row__last { text-align: right; color: var(--primitive-secondary); white-space: nowrap; }
+
 /* ===== Tabs row ===== */
 .tabsrow { display: flex; gap: var(--spacing-2x); margin-bottom: var(--spacing-4x); }
 

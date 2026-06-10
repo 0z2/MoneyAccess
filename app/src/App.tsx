@@ -11,7 +11,7 @@ import {
 import {
   Key, Eye, Card, Gear, DocumentList, DocumentListAcsArrowDownOutgoing,
   WarningTriangle, Person, Speedometer,
-  Integration, Puzzle, Calendar, Bell, CheckmarkCircle, Cross, CoinsRuble, ArrowLeft,
+  Integration, Puzzle, Calendar, Bell, CheckmarkCircle, Cross, CoinsRuble, ArrowLeft, Laptop,
 } from '@tds/icons';
 import {
   EMPLOYEES, TYPE_LABEL, NOW, WD,
@@ -405,6 +405,55 @@ const TeamCard: React.FC = () => {
   );
 };
 
+/* ===== Устройства сотрудника ===== */
+const DevicesCard: React.FC<{ emp: Employee }> = ({ emp }) => {
+  const devices = useMemo(() => {
+    const m = new Map<string, { device: string; cnt: number; cities: Set<string>; last: Action; alert: boolean }>();
+    loginsOf(emp).forEach((l) => {
+      const d = m.get(l.device!);
+      if (d) {
+        d.cnt++;
+        d.cities.add(l.city!);
+        if (l.t > d.last.t) d.last = l;
+        if (l.geoOk === false) d.alert = true;
+      } else {
+        m.set(l.device!, { device: l.device!, cnt: 1, cities: new Set([l.city!]), last: l, alert: l.geoOk === false });
+      }
+    });
+    return [...m.values()].sort((a, b) => b.last.t - a.last.t);
+  }, [emp]);
+
+  return (
+    <div className="card content-card">
+      <div className="geo-head">
+        <div className="ts-600-m">{devices.length} {plural(devices.length, 'устройство', 'устройства', 'устройств')}</div>
+      </div>
+      {devices.map((d) => (
+        <div key={d.device} className={'device-row' + (d.alert ? ' deviation' : '')}>
+          <Avatar
+            size="m" shape="superellipse" icon={<Icon icon={<Laptop />} size="s" />}
+            style={{
+              '--avatar-surface': d.alert ? 'var(--bg-warning-1)' : 'var(--bg-neutral-2)',
+              '--avatar-color': d.alert ? '#8a6d12' : 'var(--primitive-secondary)',
+            } as React.CSSProperties}
+          />
+          <div className="device-row__body">
+            <div className="ts-500-s">{d.device}</div>
+            <div className="device-row__sub ts-400-xs">
+              {[...d.cities].join(', ')} · {d.cnt} {plural(d.cnt, 'вход', 'входа', 'входов')}
+              {d.alert && <span className="device-row__flag"> · вход из нового региона</span>}
+            </div>
+          </div>
+          <div className="device-row__last ts-400-xs">
+            Последний вход<br />
+            <span className="ts-500-s">{dmy(d.last.date)}, {hm(d.last.date)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 /* ===== IP и география (таблица входов) ===== */
 const GeoTable: React.FC<{ emp: Employee; range: [Date, Date] }> = ({ emp, range }) => {
   const logins = loginsOf(emp).filter((l) => l.date >= range[0] && l.date <= range[1]);
@@ -729,7 +778,12 @@ const App: React.FC = () => {
                 </div>
               )}
               {tab === 'timeline' && <TimelineGrid emp={emp} range={range} />}
-              {tab === 'geo' && <GeoTable emp={emp} range={range} />}
+              {tab === 'geo' && (
+                <>
+                  <DevicesCard emp={emp} />
+                  <GeoTable emp={emp} range={range} />
+                </>
+              )}
             </main>
             <ActionRail />
           </>
