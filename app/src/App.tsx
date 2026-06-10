@@ -357,18 +357,14 @@ const TimelineGrid: React.FC<{ emp: Employee; range: [Date, Date] }> = ({ emp, r
   );
 };
 
-/* ===== Общий борд команды (главный экран) ===== */
-const TeamCard: React.FC<{ range: 'week' | 'month'; onRange: (r: 'week' | 'month') => void }> = ({ range, onRange }) => {
+/* ===== Общий борд команды (главный экран): только сегодня ===== */
+const TeamCard: React.FC = () => {
   const [tip, setTip] = useState<Tip>(null);
-  const daysBack = range === 'week' ? 7 : 30;
   const data = useMemo(() => EMPLOYEES.map((e) => {
-    const rows = buildSegments(e.actions, daysBack);
-    const dur = rows.filter((r) => r.segs.length).map((r) => r.segs.reduce((s, x) => s + (x.end - x.start), 0));
-    const avg = dur.length ? dur.reduce((s, x) => s + x, 0) / dur.length : 0;
-    const today = rows[0].segs;
+    const today = buildSegments(e.actions, 1)[0].segs;
     const todayH = today.reduce((s, x) => s + (x.end - x.start), 0);
-    return { e, today, todayH, avg };
-  }), [daysBack]);
+    return { e, today, todayH };
+  }), []);
 
   return (
     <div className="card content-card team-card">
@@ -377,15 +373,11 @@ const TeamCard: React.FC<{ range: 'week' | 'month'; onRange: (r: 'week' | 'month
           <div className="ts-600-m">Рабочее время команды</div>
           <div className="emp-table-sub ts-400-xs">Сегодня, {dmy(NOW)} · по часам</div>
         </div>
-        <div className="controls__group">
-          <Chip variant="tab" isSelected={range === 'week'} onClick={() => onRange('week')}>Неделя</Chip>
-          <Chip variant="tab" isSelected={range === 'month'} onClick={() => onRange('month')}>Месяц</Chip>
-        </div>
       </div>
       <div className="tl-grid">
         <HourAxis labelWidth={180} />
         <div>
-          {data.map(({ e, today, todayH, avg }) => (
+          {data.map(({ e, today, todayH }) => (
             <div className="tl-row team-row" key={e.id}>
               <div className="team-row__lbl">
                 <Avatar
@@ -396,7 +388,7 @@ const TeamCard: React.FC<{ range: 'week' | 'month'; onRange: (r: 'week' | 'month
               </div>
               <Track segs={today} setTip={setTip} />
               <div className="team-row__sum ts-400-xs">
-                {todayH ? fmtH(todayH) : '—'} · ср. {avg ? fmtH(avg) : '—'}/д
+                {todayH ? fmtH(todayH) : 'не заходил(а)'}
               </div>
             </div>
           ))}
@@ -551,7 +543,6 @@ const App: React.FC = () => {
   const [customTo, setCustomTo] = useState(ymd(dayOffset(0)));
   const [onlySusp, setOnlySusp] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [teamRange, setTeamRange] = useState<'week' | 'month'>('week');
 
   const emp = EMPLOYEES.find((e) => e.id === empId)!;
   const toggleCheck = (id: string) => setChecked((prev) => {
@@ -656,7 +647,7 @@ const App: React.FC = () => {
                 />
               </div>
               <EmployeeTable range={weekRange} checked={checked} onOpen={openEmployee} />
-              <TeamCard range={teamRange} onRange={setTeamRange} />
+              <TeamCard />
             </main>
           </>
         ) : (
