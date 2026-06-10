@@ -26,7 +26,9 @@ export interface Employee {
   name: string;
   initials: string;
   role: string;
-  sign: boolean;
+  sign: boolean; // право подписи — только такие сотрудники могут проводить платежи
+  products: string[];
+  limit: number | null; // лимит на операцию, ₽ (null — лимит не задан / платежей нет)
   online: boolean;
   current?: { label: string; type: ActionType };
   lastVisit?: Date;
@@ -129,23 +131,31 @@ function mkLogin(net: Net, date: Date, hour: number, out = false, extra?: Partia
   return mkAct(
     date, hour, 'auth',
     out ? 'Выход из интернет-банка' : 'Вход в интернет-банк',
-    `${net.device.split(' · ')[0] === 'Chrome' || net.device.split(' · ')[0] === 'Safari' ? 'Десктоп' : 'Мобильное устройство'}, ${net.city}`,
+    `${net.device.startsWith('Chrome') || net.device.startsWith('Safari') || net.device.startsWith('Firefox') ? 'Десктоп' : 'Мобильное устройство'}, ${net.city}`,
     out ? undefined : { ip: net.ip, city: net.city, device: net.device, geoOk: true, ...extra },
   );
 }
 
-function genDay(rnd: () => number, net: Net, date: Date, count: number, suspList?: ((d: Date) => Action)[]): Action[] {
+function genDay(rnd: () => number, net: Net, canPay: boolean, date: Date, count: number, suspList?: ((d: Date) => Action)[]): Action[] {
   const acts: Action[] = [];
   acts.push(mkLogin(net, date, 8.6 + rnd() * 0.8));
-  for (let i = 0; i < count; i++) {
-    const h = 9 + rnd() * 8.5;
-    const t = WEIGHTS[Math.floor(rnd() * WEIGHTS.length)];
-    if (t === 'payment') {
-      const p = PAYMENTS[Math.floor(rnd() * PAYMENTS.length)];
-      acts.push(mkAct(date, h, 'payment', p[0], `${p[1]}, ${rub(p[2])}`, { amount: p[2] }));
-    } else {
-      const tpl = POOL[t][Math.floor(rnd() * POOL[t].length)];
-      acts.push(mkAct(date, h, t, tpl[0], tpl[1]));
+  // Люди работают блоками: сортируем времена и раздаём типы сериями по 1–4 действия —
+  // так на таймлайне видны осмысленные «кусочки» занятий.
+  const hours = Array.from({ length: count }, () => 9 + rnd() * 8.5).sort((a, b) => a - b);
+  let i = 0;
+  while (i < count) {
+    let t = WEIGHTS[Math.floor(rnd() * WEIGHTS.length)];
+    if (t === 'payment' && !canPay) t = 'view'; // без права подписи платежей нет
+    const blockLen = 1 + Math.floor(rnd() * 4);
+    for (let j = 0; j < blockLen && i < count; j++, i++) {
+      const h = hours[i];
+      if (t === 'payment') {
+        const p = PAYMENTS[Math.floor(rnd() * PAYMENTS.length)];
+        acts.push(mkAct(date, h, 'payment', p[0], `${p[1]}, ${rub(p[2])}`, { amount: p[2] }));
+      } else {
+        const tpl = POOL[t][Math.floor(rnd() * POOL[t].length)];
+        acts.push(mkAct(date, h, t, tpl[0], tpl[1]));
+      }
     }
   }
   acts.push(mkLogin(net, date, 13 + rnd() * 0.5, true));
@@ -165,7 +175,7 @@ function buildPetrova(net: Net): Action[] {
     const weekend = dow === 0 || dow === 6;
     if (weekend) {
       if (rnd() < 0.5) continue;
-      all = all.concat(genDay(rnd, net, date, 2 + Math.floor(rnd() * 3)));
+      all = all.concat(genDay(rnd, net, true, date, 2 + Math.floor(rnd() * 3)));
       continue;
     }
     const heavy = off <= 6;
@@ -194,40 +204,44 @@ function buildPetrova(net: Net): Action[] {
         susp: 'Вход из Новосибирской области (обычный регион: Москва и МО)',
       })];
     }
-    all = all.concat(genDay(rnd, net, date, count, susp));
+    all = all.concat(genDay(rnd, net, true, date, count, susp));
   }
   return all;
 }
 
-function buildSimple(seed: number, net: Net, days: number[]): Action[] {
+function buildSimple(seed: number, net: Net, canPay: boolean, days: number[]): Action[] {
   const rnd = mulberry32(seed);
   let all: Action[] = [];
   days.forEach((off) => {
-    all = all.concat(genDay(rnd, net, dayOffset(off), 4 + Math.floor(rnd() * 4)));
+    all = all.concat(genDay(rnd, net, canPay, dayOffset(off), 4 + Math.floor(rnd() * 4)));
   });
   return all;
 }
 
 export const EMPLOYEES: Employee[] = [
   {
-    id: 'petrova', name: 'Петрова Анна Сергеевна', initials: 'ПА', role: 'Бухгалтер', sign: false,
+    id: 'petrova', name: 'Петрова Анна Сергеевна', initials: 'ПА', role: 'Бухгалтер', sign: true,
+    products: ['Платежи', 'Выписки', 'Контрагенты'], limit: 100000,
     online: true, current: { label: 'Платежи → По реквизитам', type: 'payment' },
     actions: buildPetrova({ ip: '95.79.42.18', city: 'Москва', device: 'Chrome · Windows 11' }),
   },
   {
     id: 'kozlov', name: 'Козлов Дмитрий Игоревич', initials: 'КД', role: 'Финансовый директор', sign: true,
+    products: ['Платежи', 'Выписки', 'Аналитика', 'Депозиты'], limit: null,
     online: true, current: { label: 'Аналитика', type: 'view' },
-    actions: buildSimple(202, { ip: '212.45.8.101', city: 'Москва', device: 'Safari · macOS' }, [0, 1, 2]),
+    actions: buildSimple(202, { ip: '212.45.8.101', city: 'Москва', device: 'Safari · macOS' }, true, [0, 1, 2]),
   },
   {
     id: 'sidorova', name: 'Сидорова Елена Владимировна', initials: 'СЕ', role: 'Помощник', sign: false,
+    products: ['Выписки', 'Контрагенты'], limit: null,
     online: false, lastVisit: new Date(2026, 5, 9, 14, 23),
-    actions: buildSimple(303, { ip: '95.79.40.91', city: 'Москва', device: 'Chrome · Windows 11' }, [0, 1]),
+    actions: buildSimple(303, { ip: '95.79.40.91', city: 'Москва', device: 'Chrome · Windows 11' }, false, [0, 1]),
   },
   {
     id: 'novikov', name: 'Новиков Алексей Петрович', initials: 'НА', role: 'Бухгалтер', sign: false,
+    products: ['Выписки', 'Онлайн-бухгалтерия'], limit: null,
     online: false, lastVisit: new Date(2026, 5, 8, 18, 1),
-    actions: buildSimple(404, { ip: '78.107.233.4', city: 'Подольск', device: 'Chrome · Windows 11' }, [1, 2]),
+    actions: buildSimple(404, { ip: '78.107.233.4', city: 'Подольск', device: 'Chrome · Windows 11' }, false, [1, 2]),
   },
 ];
 
@@ -236,14 +250,14 @@ export const loginsOf = (e: Employee) =>
   e.actions.filter((a) => a.type === 'auth' && a.ip).sort((a, b) => b.t - a.t);
 
 /* ===== Сводки по сотруднику за период ===== */
-export function summarize(e: Employee, from: Date, to: Date, marks: Set<string>, checked: Set<string>) {
+export function summarize(e: Employee, from: Date, to: Date, checked: Set<string>) {
   let acts = 0, paid = 0, susp = 0, unviewed = 0;
   let last: Date | null = null;
   e.actions.forEach((a) => {
     if (a.date < from || a.date > to) return;
     acts++;
     if (a.type === 'payment' && a.status === 'ok' && a.amount) paid += a.amount;
-    if (a.susp || marks.has(a.id)) {
+    if (a.susp) {
       susp++;
       if (!checked.has(a.id)) unviewed++;
     }
@@ -252,11 +266,27 @@ export function summarize(e: Employee, from: Date, to: Date, marks: Set<string>,
   return { acts, paid, susp, unviewed, last: last as Date | null };
 }
 
-/* ===== Таймлайн: кластеризация активности по дням ===== */
-export interface Segment { start: number; end: number; cnt: number; susp: number; }
+/* ===== Распределение действий по типам («чем занимался») ===== */
+export function typeShares(e: Employee, from: Date, to: Date): { type: ActionType; cnt: number; share: number }[] {
+  const cnt = new Map<ActionType, number>();
+  let total = 0;
+  e.actions.forEach((a) => {
+    if (a.date < from || a.date > to) return;
+    cnt.set(a.type, (cnt.get(a.type) || 0) + 1);
+    total++;
+  });
+  if (!total) return [];
+  return TYPE_ORDER
+    .filter((t) => cnt.get(t))
+    .map((t) => ({ type: t, cnt: cnt.get(t)!, share: cnt.get(t)! / total }))
+    .sort((a, b) => b.cnt - a.cnt);
+}
+
+/* ===== Таймлайн: кластеризация активности по дням, с разбивкой по типам занятий ===== */
+export interface Segment { start: number; end: number; cnt: number; susp: number; type: ActionType; }
 export interface DayRow { date: Date; segs: Segment[]; }
 
-export function buildSegments(actions: Action[], daysBack: number, markedSet: Set<string>): DayRow[] {
+export function buildSegments(actions: Action[], daysBack: number): DayRow[] {
   const byDay: Record<string, Action[]> = {};
   actions.forEach((a) => {
     (byDay[ymd(a.date)] = byDay[ymd(a.date)] || []).push(a);
@@ -269,14 +299,29 @@ export function buildSegments(actions: Action[], daysBack: number, markedSet: Se
     if (acts.length) {
       let start = acts[0].date.getHours() + acts[0].date.getMinutes() / 60;
       let end = start, cnt = 0, susp = 0;
-      const flush = () => segs.push({ start, end: Math.min(24, end + 0.25), cnt, susp });
+      let type: ActionType = acts[0].type;
+      const counts = new Map<ActionType, number>();
+      const flush = () => {
+        // тип сегмента — преобладающее занятие внутри кластера
+        let best: ActionType = type, bestN = 0;
+        counts.forEach((n, t) => { if (n > bestN) { bestN = n; best = t; } });
+        segs.push({ start, end: Math.min(24, end + 0.25), cnt, susp, type: best });
+        counts.clear();
+      };
       acts.forEach((a, i) => {
         const h = a.date.getHours() + a.date.getMinutes() / 60;
-        if (i > 0 && h - end > 0.75) { flush(); start = h; cnt = 0; susp = 0; }
+        // новый кусочек: разрыв по времени ИЛИ человек переключился на другой тип занятия
+        if (i > 0 && (h - end > 0.75 || a.type !== type)) { flush(); start = h; cnt = 0; susp = 0; }
+        type = a.type;
         end = h; cnt++;
-        if (a.susp || markedSet.has(a.id)) susp++;
+        counts.set(a.type, (counts.get(a.type) || 0) + 1);
+        if (a.susp) susp++;
       });
       flush();
+      // не даём соседним кусочкам наезжать друг на друга из-за хвостового паддинга
+      for (let k = 0; k < segs.length - 1; k++) {
+        if (segs[k].end > segs[k + 1].start) segs[k].end = segs[k + 1].start;
+      }
     }
     rows.push({ date, segs });
   }

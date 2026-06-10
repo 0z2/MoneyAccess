@@ -8,15 +8,16 @@ import {
   Chip,
   Checkbox,
   Tag,
+  Button,
 } from '@tds';
 import {
   Key, Eye, Card, Gear, DocumentList, DocumentListAcsArrowDownOutgoing,
   WarningTriangle, Person, Speedometer,
-  Integration, Puzzle, Calendar, Filters, Cross, Bell, CheckmarkCircle,
+  Integration, Puzzle, Calendar, Filters, Bell, CheckmarkCircle, Cross,
 } from '@tds/icons';
 import {
   EMPLOYEES, TYPE_LABEL, TYPE_ORDER, NOW, WD,
-  dayOffset, ymd, dmy, hm, hmFloat, dayHead, buildSegments, loginsOf, summarize, rub,
+  dayOffset, ymd, dmy, hm, hmFloat, dayHead, buildSegments, loginsOf, summarize, typeShares, rub,
   type Action, type ActionType, type Employee,
 } from './data';
 
@@ -30,7 +31,15 @@ const TYPE_ICON: Record<ActionType, React.ReactNode> = {
   documents: <DocumentList />, export: <DocumentListAcsArrowDownOutgoing />,
 };
 
-const isSuspOf = (a: Action, marks: Set<string>) => !!a.susp || marks.has(a.id);
+// Цвета занятий — для таймлайна и диаграммы «чем занимался»
+const TYPE_COLOR: Record<ActionType, string> = {
+  auth: '#98a2b3',
+  view: 'var(--primitive-brand)',
+  payment: '#2f9e44',
+  settings: '#74808f',
+  documents: '#1c7ed6',
+  export: '#e8590c',
+};
 
 /* ===== Sidebar ===== */
 const NAV = [
@@ -56,15 +65,11 @@ const EmployeeTable: React.FC<{
   range: [Date, Date];
   periodLabel: string;
   empId: string;
-  marks: Set<string>;
   checked: Set<string>;
   onSelect: (id: string) => void;
-}> = ({ range, periodLabel, empId, marks, checked, onSelect }) => {
+}> = ({ range, periodLabel, empId, checked, onSelect }) => {
   const [from, to] = range;
-  const rows = EMPLOYEES.map((e) => ({ e, s: summarize(e, from, to, marks, checked) }));
-  const totalPaid = rows.reduce((s, r) => s + r.s.paid, 0);
-  const totalActs = rows.reduce((s, r) => s + r.s.acts, 0);
-  const totalUnviewed = rows.reduce((s, r) => s + r.s.unviewed, 0);
+  const rows = EMPLOYEES.map((e) => ({ e, s: summarize(e, from, to, checked) }));
 
   return (
     <div className="card emp-table-card">
@@ -72,13 +77,6 @@ const EmployeeTable: React.FC<{
         <div>
           <div className="ts-600-m">Сотрудники</div>
           <div className="emp-table-sub ts-400-xs">Период: {periodLabel.toLowerCase()}</div>
-        </div>
-        <div className="emp-totals ts-400-s">
-          <span>Платежи: <b>{rub(totalPaid)}</b></span>
-          <span>Действий: <b>{totalActs}</b></span>
-          <span className={totalUnviewed ? 'tot-alert' : ''}>
-            Непросмотренных рисков: <b>{totalUnviewed}</b>
-          </span>
         </div>
       </div>
       <table className="emp-table">
@@ -125,7 +123,7 @@ const EmployeeTable: React.FC<{
                 </Tag>
               </td>
               <td className="num ts-500-s">{s.acts || '—'}</td>
-              <td className="num ts-500-s">{s.paid ? rub(s.paid) : '—'}</td>
+              <td className="num ts-500-s">{e.sign ? (s.paid ? rub(s.paid) : '—') : '—'}</td>
               <td>
                 {s.unviewed > 0 ? (
                   <span className="risk-pill risk-pill--alert ts-500-xs">
@@ -145,6 +143,90 @@ const EmployeeTable: React.FC<{
           ))}
         </tbody>
       </table>
+    </div>
+  );
+};
+
+/* ===== Донат «чем занимался» ===== */
+const Donut: React.FC<{ shares: { type: ActionType; cnt: number; share: number }[]; total: number }> = ({ shares, total }) => {
+  const R = 30, SW = 11;
+  const C = 2 * Math.PI * R;
+  let acc = 0;
+  return (
+    <div className="donut-wrap">
+      <svg width="84" height="84" viewBox="0 0 84 84">
+        <circle cx="42" cy="42" r={R} fill="none" stroke="var(--bg-neutral-2)" strokeWidth={SW} />
+        {shares.map((s) => {
+          const dash = s.share * C;
+          const el = (
+            <circle
+              key={s.type}
+              cx="42" cy="42" r={R} fill="none"
+              stroke={TYPE_COLOR[s.type]} strokeWidth={SW}
+              strokeDasharray={`${dash} ${C - dash}`}
+              strokeDashoffset={-acc}
+              transform="rotate(-90 42 42)"
+            />
+          );
+          acc += dash;
+          return el;
+        })}
+        <text x="42" y="40" textAnchor="middle" className="donut-num">{total}</text>
+        <text x="42" y="52" textAnchor="middle" className="donut-cap">действий</text>
+      </svg>
+      <div className="donut-legend">
+        {shares.slice(0, 4).map((s) => (
+          <div key={s.type} className="donut-legend__row ts-400-xs">
+            <i style={{ background: TYPE_COLOR[s.type] }} />
+            <span>{TYPE_LABEL[s.type]}</span>
+            <b>{Math.round(s.share * 100)}%</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ===== Панель выбранного сотрудника ===== */
+const EmployeePanel: React.FC<{ emp: Employee; range: [Date, Date]; periodLabel: string; checked: Set<string> }> = ({ emp, range, periodLabel, checked }) => {
+  const today = summarize(emp, dayOffset(0), NOW, checked);
+  const shares = useMemo(() => typeShares(emp, range[0], range[1]), [emp, range]);
+  const total = shares.reduce((s, x) => s + x.cnt, 0);
+  return (
+    <div className="card emp-panel">
+      <div className="emp-panel__id">
+        <Avatar
+          label={emp.initials} size="l" shape="superellipse"
+          style={{ '--avatar-surface': 'var(--bg-brand-2)', '--avatar-color': 'var(--primitive-brand)' } as React.CSSProperties}
+        />
+        <div>
+          <div className="emp-panel__cap ts-500-xs">Выбранный сотрудник</div>
+          <div className="ts-600-m">{emp.name.split(' ').slice(0, 2).join(' ')}</div>
+          <div className="emp-cell__role ts-400-xs">{emp.role} · {emp.sign ? 'с правом подписи' : 'без права подписи'}</div>
+        </div>
+      </div>
+      <div className="emp-panel__col">
+        <div className="emp-panel__lbl ts-400-xs">Доступы к продуктам</div>
+        <div className="ts-500-s">{emp.products.join(', ')}</div>
+      </div>
+      <div className="emp-panel__col">
+        <div className="emp-panel__lbl ts-400-xs">Лимит на операцию</div>
+        <div className="ts-500-s">{emp.sign ? (emp.limit ? `до ${rub(emp.limit)}` : 'Без лимита') : '—'}</div>
+      </div>
+      <div className="emp-panel__col">
+        <div className="emp-panel__lbl ts-400-xs">Сегодня</div>
+        <div className="ts-500-s">
+          {today.acts} действий{today.susp > 0 && <> · <span className={today.unviewed ? 'txt-alert' : ''}>рисков: {today.susp}</span></>}
+        </div>
+      </div>
+      <div className="emp-panel__col emp-panel__donut">
+        <div className="emp-panel__lbl ts-400-xs">Чем занимался · {periodLabel.toLowerCase()}</div>
+        {shares.length ? <Donut shares={shares} total={total} /> : <div className="ts-400-s" style={{ color: 'var(--primitive-neutral-4)' }}>Нет данных</div>}
+      </div>
+      <div className="emp-panel__actions">
+        <Button variant="secondary" size="s">Изменить права</Button>
+        <Button variant="primary" size="s">Управлять доступом</Button>
+      </div>
     </div>
   );
 };
@@ -188,13 +270,10 @@ const TypeFilter: React.FC<{ selected: ActionType[]; onChange: (v: ActionType[])
 /* ===== Action row ===== */
 const ActionRow: React.FC<{
   a: Action;
-  marked: boolean;
   isChecked: boolean;
-  onToggleMark: (id: string) => void;
   onToggleCheck: (id: string) => void;
-}> = ({ a, marked, isChecked, onToggleMark, onToggleCheck }) => {
-  const isSusp = !!a.susp || marked;
-  const reason = a.susp || (marked ? 'Помечено вручную как подозрительное' : null);
+}> = ({ a, isChecked, onToggleCheck }) => {
+  const isSusp = !!a.susp;
   const declined = a.status === 'declined';
   return (
     <div className={'act-row' + (isSusp ? ' susp' : '')}>
@@ -219,21 +298,18 @@ const ActionRow: React.FC<{
               <span className={`tag-tint tag-tint--${a.type} ts-500-xs`}>{TYPE_LABEL[a.type]}</span>
               <span className="act-time ts-400-s">{hm(a.date)}</span>
             </span>
-            <span className="act-mark">
-              {isSusp && (
+            {isSusp && (
+              <span className="act-mark">
                 <Chip
                   variant="action"
                   leftAccessory="icon"
-                  leftIcon={<CheckmarkCircle />}
+                  leftIcon={isChecked ? <Cross /> : <CheckmarkCircle />}
                   onClick={() => onToggleCheck(a.id)}
                 >
                   {isChecked ? 'Снять «проверено»' : 'Проверено'}
                 </Chip>
-              )}
-              <Chip variant="action" leftAccessory="icon" leftIcon={marked ? <Cross /> : <WarningTriangle />} onClick={() => onToggleMark(a.id)}>
-                {marked ? 'Снять пометку' : 'Пометить'}
-              </Chip>
-            </span>
+              </span>
+            )}
           </div>
         }
       />
@@ -243,17 +319,17 @@ const ActionRow: React.FC<{
           <span>{a.declineReason}</span>
         </div>
       )}
-      {reason && (
+      {a.susp && (
         <div className="act-reason-line ts-400-xs">
           <Icon icon={isChecked ? <CheckmarkCircle /> : <WarningTriangle />} size="2xs" color={isChecked ? 'var(--primitive-success, #2f9e44)' : '#c79a14'} />
-          <span>{reason}{isChecked ? ' · проверено' : ''}</span>
+          <span>{a.susp}{isChecked ? ' · проверено' : ''}</span>
         </div>
       )}
     </div>
   );
 };
 
-/* ===== Timeline (один сотрудник) ===== */
+/* ===== Timeline ===== */
 const HOURS = [0, 3, 6, 9, 12, 15, 18, 21, 24];
 const fmtH = (h: number) => `${Math.floor(h)}ч ${Math.round((h % 1) * 60)}мин`;
 
@@ -266,18 +342,22 @@ const HourAxis: React.FC<{ labelWidth?: number }> = ({ labelWidth = 76 }) => (
 type Tip = { x: number; y: number; text: string } | null;
 
 const Track: React.FC<{
-  segs: { start: number; end: number; cnt: number; susp: number }[];
+  segs: { start: number; end: number; cnt: number; susp: number; type: ActionType }[];
   setTip: (t: Tip) => void;
 }> = ({ segs, setTip }) => (
   <div className="tl-track">
     {HOURS.map((h) => <i key={h} style={{ left: (h / 24 * 100) + '%' }} />)}
     {segs.map((s, j) => {
-      const text = `${hmFloat(s.start)}–${hmFloat(s.end)}, ${s.cnt} действ.${s.susp ? `, ${s.susp} подозрит.` : ''}`;
+      const text = `${TYPE_LABEL[s.type]} · ${hmFloat(s.start)}–${hmFloat(s.end)}, ${s.cnt} действ.${s.susp ? `, ${s.susp} подозрит.` : ''}`;
       return (
         <div
           key={j}
           className={'tl-seg' + (s.susp ? ' tl-seg--susp' : '')}
-          style={{ left: (s.start / 24 * 100) + '%', width: ((s.end - s.start) / 24 * 100) + '%' }}
+          style={{
+            left: (s.start / 24 * 100) + '%',
+            width: ((s.end - s.start) / 24 * 100) + '%',
+            background: s.susp ? undefined : TYPE_COLOR[s.type],
+          }}
           onMouseEnter={(e) => setTip({ x: e.clientX, y: e.clientY, text })}
           onMouseMove={(e) => setTip({ x: e.clientX, y: e.clientY, text })}
           onMouseLeave={() => setTip(null)}
@@ -287,10 +367,19 @@ const Track: React.FC<{
   </div>
 );
 
-const TimelineBody: React.FC<{ emp: Employee; marks: Set<string>; range: 'week' | 'month' }> = ({ emp, marks, range }) => {
+const TypeLegend: React.FC = () => (
+  <div className="tl-legend ts-400-xs">
+    {TYPE_ORDER.map((t) => (
+      <span key={t}><i style={{ background: TYPE_COLOR[t] }} /> {TYPE_LABEL[t]}</span>
+    ))}
+    <span><i style={{ background: 'var(--primitive-warning)' }} /> Подозрительное</span>
+  </div>
+);
+
+const TimelineBody: React.FC<{ emp: Employee; range: 'week' | 'month' }> = ({ emp, range }) => {
   const [tip, setTip] = useState<Tip>(null);
   const daysBack = range === 'week' ? 7 : 30;
-  const rows = useMemo(() => buildSegments(emp.actions, daysBack, marks), [emp, daysBack, marks]);
+  const rows = useMemo(() => buildSegments(emp.actions, daysBack), [emp, daysBack]);
 
   const active = rows.filter((r) => r.segs.length);
   const dur = active.map((r) => ({ date: r.date, d: r.segs.reduce((s, x) => s + (x.end - x.start), 0) }));
@@ -315,10 +404,7 @@ const TimelineBody: React.FC<{ emp: Employee; marks: Set<string>; range: 'week' 
             </div>
           ))}
         </div>
-        <div className="tl-legend ts-400-xs">
-          <span><i style={{ background: 'var(--primitive-brand)' }} /> Активность в ИБ</span>
-          <span><i style={{ background: 'var(--primitive-warning)' }} /> Период с подозрительными действиями</span>
-        </div>
+        <TypeLegend />
       </div>
 
       {tip && <div className="tl-tip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.text}</div>}
@@ -327,17 +413,17 @@ const TimelineBody: React.FC<{ emp: Employee; marks: Set<string>; range: 'week' 
 };
 
 /* ===== Общий борд: вся команда ===== */
-const TeamBoard: React.FC<{ marks: Set<string>; range: 'week' | 'month' }> = ({ marks, range }) => {
+const TeamBoard: React.FC<{ range: 'week' | 'month' }> = ({ range }) => {
   const [tip, setTip] = useState<Tip>(null);
   const daysBack = range === 'week' ? 7 : 30;
   const data = useMemo(() => EMPLOYEES.map((e) => {
-    const rows = buildSegments(e.actions, daysBack, marks);
+    const rows = buildSegments(e.actions, daysBack);
     const dur = rows.filter((r) => r.segs.length).map((r) => r.segs.reduce((s, x) => s + (x.end - x.start), 0));
     const avg = dur.length ? dur.reduce((s, x) => s + x, 0) / dur.length : 0;
     const today = rows[0].segs;
     const todayH = today.reduce((s, x) => s + (x.end - x.start), 0);
     return { e, today, todayH, avg };
-  }), [daysBack, marks]);
+  }), [daysBack]);
 
   return (
     <div className="tl-grid">
@@ -360,11 +446,7 @@ const TeamBoard: React.FC<{ marks: Set<string>; range: 'week' | 'month' }> = ({ 
           </div>
         ))}
       </div>
-      <div className="tl-legend ts-400-xs">
-        <span><i style={{ background: 'var(--primitive-brand)' }} /> Активность в ИБ сегодня</span>
-        <span><i style={{ background: 'var(--primitive-warning)' }} /> Период с подозрительными действиями</span>
-        <span>«ср.» — среднее за {range === 'week' ? 'неделю' : 'месяц'}</span>
-      </div>
+      <TypeLegend />
       {tip && <div className="tl-tip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.text}</div>}
     </div>
   );
@@ -420,11 +502,10 @@ const GeoBody: React.FC<{ emp: Employee }> = ({ emp }) => {
 
 /* ===== Уведомления (колокольчик) ===== */
 const NotifBell: React.FC<{
-  marks: Set<string>;
   checked: Set<string>;
   onGoTo: (empId: string) => void;
   onCheckAll: (ids: string[]) => void;
-}> = ({ marks, checked, onGoTo, onCheckAll }) => {
+}> = ({ checked, onGoTo, onCheckAll }) => {
   const [open, setOpen] = useState(false);
   const [chEmail, setChEmail] = useState(true);
   const [chPush, setChPush] = useState(true);
@@ -440,11 +521,11 @@ const NotifBell: React.FC<{
     const list: { emp: Employee; a: Action }[] = [];
     EMPLOYEES.forEach((emp) => {
       emp.actions.forEach((a) => {
-        if (isSuspOf(a, marks) && !checked.has(a.id)) list.push({ emp, a });
+        if (a.susp && !checked.has(a.id)) list.push({ emp, a });
       });
     });
     return list.sort((x, y) => y.a.t - x.a.t);
-  }, [marks, checked]);
+  }, [checked]);
 
   return (
     <div className="dropdown-wrap" ref={ref}>
@@ -474,7 +555,7 @@ const NotifBell: React.FC<{
                   />
                   <div className="bell-item__body">
                     <div className="ts-500-xs">{emp.name.split(' ').slice(0, 2).join(' ')} · {a.label}</div>
-                    <div className="bell-item__reason ts-400-xs">{a.susp || 'Помечено вручную'}</div>
+                    <div className="bell-item__reason ts-400-xs">{a.susp}</div>
                   </div>
                   <span className="bell-item__time ts-400-xs">{dmy(a.date)}, {hm(a.date)}</span>
                 </div>
@@ -509,19 +590,15 @@ const App: React.FC = () => {
   const [customTo, setCustomTo] = useState(ymd(dayOffset(0)));
   const [types, setTypes] = useState<ActionType[]>([]);
   const [onlySusp, setOnlySusp] = useState(false);
-  const [marks, setMarks] = useState<Set<string>>(new Set());
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<'feed' | 'timeline' | 'geo'>('feed');
   const [tlRange, setTlRange] = useState<'week' | 'month'>('week');
   const [tlScope, setTlScope] = useState<'one' | 'team'>('one');
 
   const emp = EMPLOYEES.find((e) => e.id === empId)!;
-  const toggleIn = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (id: string) =>
-    setter((prev) => {
-      const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
-    });
-  const toggleMark = toggleIn(setMarks);
-  const toggleCheck = toggleIn(setChecked);
+  const toggleCheck = (id: string) => setChecked((prev) => {
+    const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
+  });
 
   const range = useMemo<[Date, Date]>(() => {
     if (period === 'today') return [dayOffset(0), NOW];
@@ -533,28 +610,26 @@ const App: React.FC = () => {
 
   const periodLabel = PERIODS.find(([v]) => v === period)?.[1] || `${dmy(range[0])} — ${dmy(range[1])}`;
 
-  const isSusp = (a: Action) => isSuspOf(a, marks);
-
   const filtered = useMemo(() => {
     const [from, to] = range;
     return emp.actions
       .filter((a) => a.date >= from && a.date <= to)
       .filter((a) => !types.length || types.includes(a.type))
-      .filter((a) => !onlySusp || isSusp(a))
+      .filter((a) => !onlySusp || !!a.susp)
       .sort((a, b) => b.t - a.t);
-  }, [emp, range, types, onlySusp, marks]);
+  }, [emp, range, types, onlySusp]);
 
   const suspStats = useMemo(() => {
     const [from, to] = range;
     let total = 0, unviewed = 0;
     emp.actions.forEach((a) => {
-      if (a.date >= from && a.date <= to && isSusp(a)) {
+      if (a.date >= from && a.date <= to && a.susp) {
         total++;
         if (!checked.has(a.id)) unviewed++;
       }
     });
     return { total, unviewed };
-  }, [emp, range, marks, checked]);
+  }, [emp, range, checked]);
 
   const groups = useMemo(() => {
     const m = new Map<string, { date: Date; items: Action[] }>();
@@ -598,7 +673,6 @@ const App: React.FC = () => {
               hasRootLink={false}
             />
             <NotifBell
-              marks={marks}
               checked={checked}
               onGoTo={goToFromBell}
               onCheckAll={(ids) => setChecked((prev) => new Set([...prev, ...ids]))}
@@ -609,10 +683,11 @@ const App: React.FC = () => {
             range={range}
             periodLabel={periodLabel}
             empId={empId}
-            marks={marks}
             checked={checked}
             onSelect={(id) => { setEmpId(id); setOnlySusp(false); }}
           />
+
+          <EmployeePanel emp={emp} range={range} periodLabel={periodLabel} checked={checked} />
 
           <Widget
             className="mon-widget"
@@ -681,9 +756,7 @@ const App: React.FC = () => {
                         <ActionRow
                           key={a.id}
                           a={a}
-                          marked={marks.has(a.id)}
                           isChecked={checked.has(a.id)}
-                          onToggleMark={toggleMark}
                           onToggleCheck={toggleCheck}
                         />
                       ))}
@@ -693,8 +766,8 @@ const App: React.FC = () => {
               </>
             ) : tab === 'timeline' ? (
               tlScope === 'one'
-                ? <TimelineBody emp={emp} marks={marks} range={tlRange} />
-                : <TeamBoard marks={marks} range={tlRange} />
+                ? <TimelineBody emp={emp} range={tlRange} />
+                : <TeamBoard range={tlRange} />
             ) : (
               <GeoBody emp={emp} />
             )}
