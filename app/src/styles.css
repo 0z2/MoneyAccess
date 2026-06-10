@@ -111,38 +111,61 @@ button { font-family: inherit; cursor: pointer; }
 .widget-emp b { color: var(--primitive-primary); font-weight: 600; }
 .txt-alert { color: var(--primitive-error, #d43d3d); }
 
-/* ===== Единый блок выбранного сотрудника ===== */
-.mon-block { overflow: visible; padding-bottom: var(--spacing-2x); }
-.mon-block__tabs {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-4x);
-  flex-wrap: wrap; padding: var(--spacing-4x) var(--spacing-5x) var(--spacing-2x);
+/* ===== Деталка сотрудника ===== */
+.detail-rail { display: flex; flex-direction: column; }
+.back-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid var(--primitive-neutral-2); background: var(--bg-default);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--primitive-primary); margin-bottom: var(--spacing-8x);
 }
-.mon-block__tabs .tabsrow { margin-bottom: 0; }
+.back-btn:hover { background: var(--bg-neutral-1); }
+.detail-rail__crumb { color: var(--primitive-neutral-4); margin-bottom: var(--spacing-1x); }
+.detail-rail__title { line-height: 1.25; }
 
-/* Панель выбранного сотрудника — шапка блока */
-.emp-panel {
-  display: flex; align-items: center; gap: var(--spacing-4x);
-  padding: var(--spacing-4x) var(--spacing-5x);
-  border-bottom: 1px solid var(--bg-neutral-2);
-}
-.emp-panel__id { display: flex; align-items: center; gap: var(--spacing-3x); min-width: 190px; flex-shrink: 0; }
-.emp-panel__cap { color: var(--primitive-brand); text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
-.emp-panel__col { padding-left: var(--spacing-4x); border-left: 1px solid var(--bg-neutral-2); min-width: 0; flex: 1 1 0; }
-.emp-panel__lbl { color: var(--primitive-secondary); margin-bottom: var(--spacing-1x); }
-.emp-panel__col.emp-panel__donut { flex: 0 0 auto; }
-.emp-panel__donut { flex-shrink: 0; }
-.emp-panel__actions {
-  margin-left: auto; display: flex; flex-direction: column; align-items: stretch;
-  gap: var(--spacing-2x); flex-shrink: 0;
-}
+.detail-main { max-width: 760px; }
+.detail-name { margin: 0 0 var(--spacing-1x); font-size: 32px; line-height: 40px; font-weight: 700; }
+.detail-role { color: var(--primitive-secondary); margin-bottom: var(--spacing-6x); }
 
-.donut-wrap { display: flex; align-items: center; gap: var(--spacing-3x); }
-.donut-num { font-size: 15px; font-weight: 600; fill: var(--primitive-primary); font-family: inherit; }
-.donut-cap { font-size: 8px; fill: var(--primitive-secondary); font-family: inherit; }
-.donut-legend { display: flex; flex-direction: column; gap: 3px; }
-.donut-legend__row { display: flex; align-items: center; gap: 6px; color: var(--primitive-secondary); white-space: nowrap; }
-.donut-legend__row i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.donut-legend__row b { color: var(--primitive-primary); font-weight: 600; margin-left: 2px; }
+.text-tabs { display: flex; gap: var(--spacing-6x); margin-bottom: var(--spacing-5x); }
+.text-tab {
+  border: none; background: none; padding: 0;
+  font-size: 20px; line-height: 28px; font-weight: 600;
+  color: var(--primitive-neutral-3);
+}
+.text-tab:hover { color: var(--primitive-secondary); }
+.text-tab.active { color: var(--primitive-primary); }
+
+.action-rail {
+  width: 280px; flex-shrink: 0; padding: var(--spacing-12x) var(--spacing-6x) 0 0;
+  display: flex; flex-direction: column; gap: var(--spacing-2x);
+}
+.rail-btn {
+  display: flex; align-items: center; gap: var(--spacing-3x);
+  border: none; background: none; padding: var(--spacing-2-5x) var(--spacing-3x);
+  border-radius: var(--rounding-3x, 12px); color: var(--primitive-primary); text-align: left;
+}
+.rail-btn:hover { background: var(--container-transparent-1); }
+.rail-btn .ds-icon { color: var(--primitive-secondary); }
+.rail-btn--danger, .rail-btn--danger .ds-icon { color: var(--primitive-error, #d43d3d); }
+.rail-btn--danger:hover { background: var(--bg-error-1, #fdecec); }
+
+.content-card { margin-bottom: var(--spacing-5x); overflow: hidden; }
+.filter-card .detail-controls { border-bottom: none; padding-bottom: 0; }
+.feed-head { padding: var(--spacing-5x) var(--spacing-5x) 0; }
+
+/* ===== Большой пай-чарт ===== */
+.pie-wrap {
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--spacing-16x); padding: var(--spacing-6x) var(--spacing-5x) var(--spacing-8x);
+}
+.pie-label { font-size: 13px; font-weight: 500; fill: #1f2937; font-family: inherit; }
+.pie-legend { display: flex; flex-direction: column; gap: var(--spacing-4x); }
+.pie-legend__row { display: flex; align-items: center; gap: var(--spacing-3x); }
+.pie-legend__row i { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
+.pie-legend__val { color: var(--primitive-secondary); }
+
+.team-card { margin-top: var(--spacing-6x); }
 
 /* ===== Tabs row ===== */
 .tabsrow { display: flex; gap: var(--spacing-2x); margin-bottom: var(--spacing-4x); }

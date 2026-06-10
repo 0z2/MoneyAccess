@@ -7,16 +7,16 @@ import {
   Chip,
   Checkbox,
   Tag,
-  Button,
 } from '@tds';
 import {
   Key, Eye, Card, Gear, DocumentList, DocumentListAcsArrowDownOutgoing,
   WarningTriangle, Person, Speedometer,
-  Integration, Puzzle, Calendar, Filters, Bell, CheckmarkCircle, Cross,
+  Integration, Puzzle, Calendar, Bell, CheckmarkCircle, Cross, CoinsRuble, ArrowLeft,
 } from '@tds/icons';
 import {
-  EMPLOYEES, TYPE_LABEL, TYPE_ORDER, NOW, WD,
-  dayOffset, ymd, dmy, hm, hmFloat, dayHead, buildSegments, loginsOf, summarize, typeShares, rub,
+  EMPLOYEES, TYPE_LABEL, NOW, WD,
+  dayOffset, ymd, dmy, hm, hmFloat, dayHead, buildSegments, loginsOf, summarize,
+  typeShares, timeByType, cityShares, plural, rub,
   type Action, type ActionType, type Employee,
 } from './data';
 
@@ -30,17 +30,21 @@ const TYPE_ICON: Record<ActionType, React.ReactNode> = {
   documents: <DocumentList />, export: <DocumentListAcsArrowDownOutgoing />,
 };
 
-// Цвета занятий — для таймлайна и диаграммы «чем занимался»
+// Пастельная палитра занятий (по макету) — пай-чарт, таймлайн, легенды
 const TYPE_COLOR: Record<ActionType, string> = {
-  auth: '#98a2b3',
-  view: 'var(--primitive-brand)',
-  payment: '#2f9e44',
-  settings: '#74808f',
-  documents: '#1c7ed6',
-  export: '#e8590c',
+  view: '#E2917E',
+  auth: '#EE8E98',
+  payment: '#8FACE0',
+  documents: '#95C5A0',
+  export: '#C9A7E2',
+  settings: '#9AA6B5',
 };
+const PALETTE = ['#8FACE0', '#E2917E', '#95C5A0', '#EE8E98', '#C9A7E2', '#9AA6B5'];
 
-/* ===== Sidebar ===== */
+const fmtH = (h: number) => `${Math.floor(h)}ч ${Math.round((h % 1) * 60)}мин`;
+const shortName = (e: Employee) => e.name.split(' ').slice(0, 2).join(' ');
+
+/* ===== Sidebar (список) ===== */
 const NAV = [
   { ico: <Person />, label: 'Доступы' },
   { ico: <Speedometer />, label: 'Мониторинг', active: true },
@@ -59,14 +63,33 @@ const Sidebar: React.FC = () => (
   </aside>
 );
 
+/* ===== Левая колонка деталки ===== */
+const DetailRail: React.FC<{ onBack: () => void }> = ({ onBack }) => (
+  <aside className="sidebar detail-rail">
+    <button className="back-btn" onClick={onBack} aria-label="Назад">
+      <Icon icon={<ArrowLeft />} size="s" />
+    </button>
+    <div className="detail-rail__crumb ts-400-xs">Доступы ›</div>
+    <div className="detail-rail__title ts-600-l">Мониторинг действий</div>
+  </aside>
+);
+
+/* ===== Правая колонка действий ===== */
+const ActionRail: React.FC = () => (
+  <aside className="action-rail">
+    <button className="rail-btn"><Icon icon={<Person />} size="s" /><span className="ts-500-s">Изменить роль и срок</span></button>
+    <button className="rail-btn"><Icon icon={<CoinsRuble />} size="s" /><span className="ts-500-s">Настроить счета</span></button>
+    <button className="rail-btn"><Icon icon={<DocumentListAcsArrowDownOutgoing />} size="s" /><span className="ts-500-s">Скачать доверенность</span></button>
+    <button className="rail-btn rail-btn--danger"><Icon icon={<Cross />} size="s" /><span className="ts-500-s">Отозвать доступ</span></button>
+  </aside>
+);
+
 /* ===== Employee table ===== */
 const EmployeeTable: React.FC<{
   range: [Date, Date];
-  periodLabel: string;
-  empId: string;
   checked: Set<string>;
-  onSelect: (id: string) => void;
-}> = ({ range, periodLabel, empId, checked, onSelect }) => {
+  onOpen: (id: string) => void;
+}> = ({ range, checked, onOpen }) => {
   const [from, to] = range;
   const rows = EMPLOYEES.map((e) => ({ e, s: summarize(e, from, to, checked) }));
 
@@ -75,7 +98,7 @@ const EmployeeTable: React.FC<{
       <div className="emp-table-head">
         <div>
           <div className="ts-600-m">Сотрудники</div>
-          <div className="emp-table-sub ts-400-xs">Период: {periodLabel.toLowerCase()}</div>
+          <div className="emp-table-sub ts-400-xs">За последнюю неделю · нажмите на сотрудника, чтобы открыть детали</div>
         </div>
       </div>
       <table className="emp-table">
@@ -91,11 +114,7 @@ const EmployeeTable: React.FC<{
         </thead>
         <tbody>
           {rows.map(({ e, s }) => (
-            <tr
-              key={e.id}
-              className={e.id === empId ? 'active' : ''}
-              onClick={() => onSelect(e.id)}
-            >
+            <tr key={e.id} onClick={() => onOpen(e.id)}>
               <td>
                 <div className="emp-cell">
                   <Avatar
@@ -103,7 +122,7 @@ const EmployeeTable: React.FC<{
                     style={{ '--avatar-surface': 'var(--bg-brand-2)', '--avatar-color': 'var(--primitive-brand)' } as React.CSSProperties}
                   />
                   <div>
-                    <div className="ts-500-s">{e.name.split(' ').slice(0, 2).join(' ')}</div>
+                    <div className="ts-500-s">{shortName(e)}</div>
                     <div className="emp-cell__role ts-400-xs">{e.role}</div>
                   </div>
                 </div>
@@ -146,114 +165,55 @@ const EmployeeTable: React.FC<{
   );
 };
 
-/* ===== Донат «чем занимался» ===== */
-const Donut: React.FC<{ shares: { type: ActionType; cnt: number; share: number }[]; total: number }> = ({ shares, total }) => {
-  const R = 30, SW = 11;
+/* ===== Большой пай-чарт с легендой ===== */
+interface Slice { label: string; value: string; share: number; color: string }
+const BigDonut: React.FC<{ slices: Slice[] }> = ({ slices }) => {
+  const SIZE = 230, CX = SIZE / 2, R = 70, SW = 54;
   const C = 2 * Math.PI * R;
   let acc = 0;
+  const labels: { x: number; y: number; text: string }[] = [];
+  const circles = slices.map((s) => {
+    const dash = s.share * C;
+    const mid = ((acc + dash / 2) / C) * 2 * Math.PI - Math.PI / 2;
+    if (s.share >= 0.07) {
+      labels.push({
+        x: CX + R * Math.cos(mid),
+        y: CX + R * Math.sin(mid) + 4,
+        text: `${Math.round(s.share * 100)}%`,
+      });
+    }
+    const el = (
+      <circle
+        key={s.label}
+        cx={CX} cy={CX} r={R} fill="none"
+        stroke={s.color} strokeWidth={SW}
+        strokeDasharray={`${dash} ${C - dash}`}
+        strokeDashoffset={-acc}
+        transform={`rotate(-90 ${CX} ${CX})`}
+      />
+    );
+    acc += dash;
+    return el;
+  });
   return (
-    <div className="donut-wrap">
-      <svg width="84" height="84" viewBox="0 0 84 84">
-        <circle cx="42" cy="42" r={R} fill="none" stroke="var(--bg-neutral-2)" strokeWidth={SW} />
-        {shares.map((s) => {
-          const dash = s.share * C;
-          const el = (
-            <circle
-              key={s.type}
-              cx="42" cy="42" r={R} fill="none"
-              stroke={TYPE_COLOR[s.type]} strokeWidth={SW}
-              strokeDasharray={`${dash} ${C - dash}`}
-              strokeDashoffset={-acc}
-              transform="rotate(-90 42 42)"
-            />
-          );
-          acc += dash;
-          return el;
-        })}
-        <text x="42" y="40" textAnchor="middle" className="donut-num">{total}</text>
-        <text x="42" y="52" textAnchor="middle" className="donut-cap">действий</text>
+    <div className="pie-wrap">
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {circles}
+        {labels.map((l, i) => (
+          <text key={i} x={l.x} y={l.y} textAnchor="middle" className="pie-label">{l.text}</text>
+        ))}
       </svg>
-      <div className="donut-legend">
-        {shares.slice(0, 4).map((s) => (
-          <div key={s.type} className="donut-legend__row ts-400-xs">
-            <i style={{ background: TYPE_COLOR[s.type] }} />
-            <span>{TYPE_LABEL[s.type]}</span>
-            <b>{Math.round(s.share * 100)}%</b>
+      <div className="pie-legend">
+        {slices.map((s) => (
+          <div key={s.label} className="pie-legend__row">
+            <i style={{ background: s.color }} />
+            <div>
+              <div className="ts-500-s">{s.label}</div>
+              <div className="pie-legend__val ts-400-xs">{s.value}</div>
+            </div>
           </div>
         ))}
       </div>
-    </div>
-  );
-};
-
-/* ===== Панель выбранного сотрудника ===== */
-const EmployeePanel: React.FC<{ emp: Employee; range: [Date, Date]; periodLabel: string; checked: Set<string> }> = ({ emp, range, periodLabel, checked }) => {
-  const today = summarize(emp, dayOffset(0), NOW, checked);
-  const shares = useMemo(() => typeShares(emp, range[0], range[1]), [emp, range]);
-  const total = shares.reduce((s, x) => s + x.cnt, 0);
-  return (
-    <div className="emp-panel">
-      <div className="emp-panel__id">
-        <Avatar
-          label={emp.initials} size="l" shape="superellipse"
-          style={{ '--avatar-surface': 'var(--bg-brand-2)', '--avatar-color': 'var(--primitive-brand)' } as React.CSSProperties}
-        />
-        <div>
-          <div className="emp-panel__cap ts-500-xs">Выбранный сотрудник</div>
-          <div className="ts-600-m">{emp.name.split(' ').slice(0, 2).join(' ')}</div>
-          <div className="emp-cell__role ts-400-xs">{emp.role} · {emp.sign ? 'с правом подписи' : 'без права подписи'}</div>
-        </div>
-      </div>
-      <div className="emp-panel__col">
-        <div className="emp-panel__lbl ts-400-xs">Сегодня</div>
-        <div className="ts-500-s">
-          {today.acts} действий{today.susp > 0 && <> · <span className={today.unviewed ? 'txt-alert' : ''}>рисков: {today.susp}</span></>}
-        </div>
-      </div>
-      <div className="emp-panel__col emp-panel__donut">
-        <div className="emp-panel__lbl ts-400-xs">Чем занимался · {periodLabel.toLowerCase()}</div>
-        {shares.length ? <Donut shares={shares} total={total} /> : <div className="ts-400-s" style={{ color: 'var(--primitive-neutral-4)' }}>Нет данных</div>}
-      </div>
-      <div className="emp-panel__actions">
-        <Button variant="secondary" size="s">Изменить права</Button>
-        <Button variant="primary" size="s">Управлять доступом</Button>
-      </div>
-    </div>
-  );
-};
-
-/* ===== Type filter popover ===== */
-const TypeFilter: React.FC<{ selected: ActionType[]; onChange: (v: ActionType[]) => void }> = ({ selected, onChange }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  const count = selected.length;
-  const label = count === 0 || count === TYPE_ORDER.length ? 'Все типы' : `Типы: ${count}`;
-  const toggle = (t: ActionType) => {
-    const s = new Set(selected);
-    s.has(t) ? s.delete(t) : s.add(t);
-    onChange([...s]);
-  };
-  return (
-    <div className="dropdown-wrap" ref={ref}>
-      <Chip variant="dropdown" isOpen={open} leftAccessory="icon" leftIcon={<Filters />} onClick={() => setOpen((o) => !o)}>
-        {label}
-      </Chip>
-      {open && (
-        <div className="menu">
-          {TYPE_ORDER.map((t) => (
-            <div key={t} className="menu__item" onClick={() => toggle(t)}>
-              <Checkbox isChecked={selected.includes(t)} onChange={() => toggle(t)} />
-              <Icon icon={TYPE_ICON[t]} size="xs" color="var(--primitive-secondary)" />
-              <span className="ts-400-s">{TYPE_LABEL[t]}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
@@ -275,8 +235,8 @@ const ActionRow: React.FC<{
           <Avatar
             size="m" shape="superellipse" icon={<Icon icon={TYPE_ICON[a.type]} size="s" />}
             style={{
-              '--avatar-surface': declined ? 'var(--bg-error-1, #fdecec)' : isSusp ? 'var(--bg-warning-2)' : 'var(--bg-neutral-2)',
-              '--avatar-color': declined ? 'var(--primitive-error, #d43d3d)' : isSusp ? '#8a6d12' : 'var(--primitive-secondary)',
+              '--avatar-surface': declined ? 'var(--bg-error-1, #fdecec)' : isSusp ? 'var(--bg-warning-2)' : TYPE_COLOR[a.type] + '33',
+              '--avatar-color': declined ? 'var(--primitive-error, #d43d3d)' : isSusp ? '#8a6d12' : TYPE_COLOR[a.type],
             } as React.CSSProperties}
           />
         }
@@ -322,7 +282,6 @@ const ActionRow: React.FC<{
 
 /* ===== Timeline ===== */
 const HOURS = [0, 3, 6, 9, 12, 15, 18, 21, 24];
-const fmtH = (h: number) => `${Math.floor(h)}ч ${Math.round((h % 1) * 60)}мин`;
 
 const HourAxis: React.FC<{ labelWidth?: number }> = ({ labelWidth = 76 }) => (
   <div className="tl-axis" style={{ marginLeft: labelWidth }}>
@@ -358,19 +317,12 @@ const Track: React.FC<{
   </div>
 );
 
-const TypeLegend: React.FC = () => (
-  <div className="tl-legend ts-400-xs">
-    {TYPE_ORDER.map((t) => (
-      <span key={t}><i style={{ background: TYPE_COLOR[t] }} /> {TYPE_LABEL[t]}</span>
-    ))}
-    <span><i style={{ background: 'var(--primitive-warning)' }} /> Подозрительное</span>
-  </div>
-);
-
-const TimelineBody: React.FC<{ emp: Employee; range: 'week' | 'month' }> = ({ emp, range }) => {
+const TimelineGrid: React.FC<{ emp: Employee; range: [Date, Date] }> = ({ emp, range }) => {
   const [tip, setTip] = useState<Tip>(null);
-  const daysBack = range === 'week' ? 7 : 30;
-  const rows = useMemo(() => buildSegments(emp.actions, daysBack), [emp, daysBack]);
+  const rows = useMemo(
+    () => buildSegments(emp.actions, 30).filter((r) => r.date >= range[0] && r.date <= range[1]),
+    [emp, range],
+  );
 
   const active = rows.filter((r) => r.segs.length);
   const dur = active.map((r) => ({ date: r.date, d: r.segs.reduce((s, x) => s + (x.end - x.start), 0) }));
@@ -378,13 +330,12 @@ const TimelineBody: React.FC<{ emp: Employee; range: 'week' | 'month' }> = ({ em
   const best = dur.slice().sort((a, b) => b.d - a.d)[0];
 
   return (
-    <>
+    <div className="card content-card">
       <div className="tl-stats">
         <div className="stat"><div className="stat__lbl ts-400-xs">Среднее время в ИБ за день</div><div className="stat__val ts-600-xl">{fmtH(avg)}</div></div>
         <div className="stat"><div className="stat__lbl ts-400-xs">Самый активный день</div><div className="stat__val ts-600-l">{best ? `${WD[best.date.getDay()]}, ${('0' + best.date.getDate()).slice(-2)}.${('0' + (best.date.getMonth() + 1)).slice(-2)} — ${fmtH(best.d)}` : '—'}</div></div>
         <div className="stat"><div className="stat__lbl ts-400-xs">Обычные часы работы</div><div className="stat__val ts-600-xl">9:00–18:00</div></div>
       </div>
-
       <div className="tl-grid">
         <HourAxis />
         <div>
@@ -395,16 +346,14 @@ const TimelineBody: React.FC<{ emp: Employee; range: 'week' | 'month' }> = ({ em
             </div>
           ))}
         </div>
-        <TypeLegend />
       </div>
-
       {tip && <div className="tl-tip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.text}</div>}
-    </>
+    </div>
   );
 };
 
-/* ===== Общий борд: вся команда ===== */
-const TeamBoard: React.FC<{ range: 'week' | 'month' }> = ({ range }) => {
+/* ===== Общий борд команды (главный экран) ===== */
+const TeamCard: React.FC<{ range: 'week' | 'month'; onRange: (r: 'week' | 'month') => void }> = ({ range, onRange }) => {
   const [tip, setTip] = useState<Tip>(null);
   const daysBack = range === 'week' ? 7 : 30;
   const data = useMemo(() => EMPLOYEES.map((e) => {
@@ -417,76 +366,88 @@ const TeamBoard: React.FC<{ range: 'week' | 'month' }> = ({ range }) => {
   }), [daysBack]);
 
   return (
-    <div className="tl-grid">
-      <div className="team-axis-note ts-400-xs">Сегодня, {dmy(NOW)} · по часам</div>
-      <HourAxis labelWidth={180} />
-      <div>
-        {data.map(({ e, today, todayH, avg }) => (
-          <div className="tl-row team-row" key={e.id}>
-            <div className="team-row__lbl">
-              <Avatar
-                label={e.initials} size="s" shape="superellipse"
-                style={{ '--avatar-surface': 'var(--bg-brand-2)', '--avatar-color': 'var(--primitive-brand)' } as React.CSSProperties}
-              />
-              <span className="ts-500-xs">{e.name.split(' ')[0]}</span>
-            </div>
-            <Track segs={today} setTip={setTip} />
-            <div className="team-row__sum ts-400-xs">
-              {todayH ? fmtH(todayH) : '—'} · ср. {avg ? fmtH(avg) : '—'}/д
-            </div>
-          </div>
-        ))}
+    <div className="card content-card team-card">
+      <div className="geo-head">
+        <div>
+          <div className="ts-600-m">Рабочее время команды</div>
+          <div className="emp-table-sub ts-400-xs">Сегодня, {dmy(NOW)} · по часам</div>
+        </div>
+        <div className="controls__group">
+          <Chip variant="tab" isSelected={range === 'week'} onClick={() => onRange('week')}>Неделя</Chip>
+          <Chip variant="tab" isSelected={range === 'month'} onClick={() => onRange('month')}>Месяц</Chip>
+        </div>
       </div>
-      <TypeLegend />
+      <div className="tl-grid">
+        <HourAxis labelWidth={180} />
+        <div>
+          {data.map(({ e, today, todayH, avg }) => (
+            <div className="tl-row team-row" key={e.id}>
+              <div className="team-row__lbl">
+                <Avatar
+                  label={e.initials} size="s" shape="superellipse"
+                  style={{ '--avatar-surface': 'var(--bg-brand-2)', '--avatar-color': 'var(--primitive-brand)' } as React.CSSProperties}
+                />
+                <span className="ts-500-xs">{e.name.split(' ')[0]}</span>
+              </div>
+              <Track segs={today} setTip={setTip} />
+              <div className="team-row__sum ts-400-xs">
+                {todayH ? fmtH(todayH) : '—'} · ср. {avg ? fmtH(avg) : '—'}/д
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="tl-legend ts-400-xs">
+          {(Object.keys(TYPE_COLOR) as ActionType[]).map((t) => (
+            <span key={t}><i style={{ background: TYPE_COLOR[t] }} /> {TYPE_LABEL[t]}</span>
+          ))}
+          <span><i style={{ background: 'var(--primitive-warning)' }} /> Подозрительное</span>
+        </div>
+      </div>
       {tip && <div className="tl-tip" style={{ left: tip.x + 12, top: tip.y + 12 }}>{tip.text}</div>}
     </div>
   );
 };
 
-/* ===== IP и география ===== */
-const GeoBody: React.FC<{ emp: Employee }> = ({ emp }) => {
-  const logins = loginsOf(emp).slice(0, 20);
-  const cities = [...new Set(logins.map((l) => l.city))];
-  const hasDeviation = logins.some((l) => l.geoOk === false);
+/* ===== IP и география (таблица входов) ===== */
+const GeoTable: React.FC<{ emp: Employee; range: [Date, Date] }> = ({ emp, range }) => {
+  const logins = loginsOf(emp).filter((l) => l.date >= range[0] && l.date <= range[1]);
   return (
-    <div className="geo-body">
+    <div className="card content-card">
       <div className="geo-head">
-        <div>
-          <div className="ts-600-m">География входов</div>
-          <div className="emp-table-sub ts-400-xs">{cities.length} {cities.length === 1 ? 'город' : 'города'} · последние {logins.length} входов</div>
-        </div>
-        <span className={'risk-pill ts-500-xs ' + (hasDeviation ? 'risk-pill--alert' : 'risk-pill--ok')}>
-          {hasDeviation ? 'Есть отклонения' : 'Обычная география'}
-        </span>
+        <div className="ts-600-m">{logins.length} {plural(logins.length, 'вход', 'входа', 'входов')}</div>
       </div>
-      <table className="geo-table">
-        <thead>
-          <tr className="ts-400-xs">
-            <th>Дата и время</th>
-            <th>IP-адрес</th>
-            <th>Город</th>
-            <th>Устройство</th>
-            <th>Оценка</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logins.map((l) => (
-            <tr key={l.id} className={l.geoOk === false || l.susp ? 'deviation' : ''}>
-              <td className="ts-500-s">{dmy(l.date)}, {hm(l.date)}</td>
-              <td className="ts-400-s mono">{l.ip}</td>
-              <td className="ts-400-s">{l.city}</td>
-              <td className="ts-400-s">{l.device}</td>
-              <td>
-                {l.geoOk === false
-                  ? <span className="risk-pill risk-pill--alert ts-500-xs">Новый регион</span>
-                  : l.susp
-                    ? <span className="risk-pill risk-pill--alert ts-500-xs">Нерабочее время</span>
-                    : <span className="risk-pill risk-pill--ok ts-500-xs">Без отклонений</span>}
-              </td>
+      {logins.length === 0 ? (
+        <div className="empty ts-400-m">За выбранный период входов не найдено</div>
+      ) : (
+        <table className="geo-table">
+          <thead>
+            <tr className="ts-400-xs">
+              <th>Дата и время</th>
+              <th>IP-адрес</th>
+              <th>Город</th>
+              <th>Устройство</th>
+              <th>Оценка</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {logins.map((l) => (
+              <tr key={l.id} className={l.geoOk === false || l.susp ? 'deviation' : ''}>
+                <td className="ts-500-s">{dmy(l.date)}, {hm(l.date)}</td>
+                <td className="ts-400-s mono">{l.ip}</td>
+                <td className="ts-400-s">{l.city}</td>
+                <td className="ts-400-s">{l.device}</td>
+                <td>
+                  {l.geoOk === false
+                    ? <span className="risk-pill risk-pill--alert ts-500-xs">Новый регион</span>
+                    : l.susp
+                      ? <span className="risk-pill risk-pill--alert ts-500-xs">Нерабочее время</span>
+                      : <span className="risk-pill risk-pill--ok ts-500-xs">Без отклонений</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 };
@@ -545,7 +506,7 @@ const NotifBell: React.FC<{
                     style={{ '--avatar-surface': 'var(--bg-warning-1)', '--avatar-color': '#8a6d12' } as React.CSSProperties}
                   />
                   <div className="bell-item__body">
-                    <div className="ts-500-xs">{emp.name.split(' ').slice(0, 2).join(' ')} · {a.label}</div>
+                    <div className="ts-500-xs">{shortName(emp)} · {a.label}</div>
                     <div className="bell-item__reason ts-400-xs">{a.susp}</div>
                   </div>
                   <span className="bell-item__time ts-400-xs">{dmy(a.date)}, {hm(a.date)}</span>
@@ -572,19 +533,20 @@ const NotifBell: React.FC<{
 };
 
 /* ===== App ===== */
-const PERIODS: [string, string][] = [['today', 'Сегодня'], ['yesterday', 'Вчера'], ['week', 'Неделя'], ['month', 'Месяц']];
+const PERIODS: [string, string][] = [['yesterday', 'Вчера'], ['today', 'Сегодня'], ['week', 'Неделя'], ['month', 'Месяц']];
+type TabId = 'timeline' | 'feed' | 'geo';
+const TABS: [TabId, string][] = [['timeline', 'Рабочее время'], ['feed', 'Действия'], ['geo', 'IP и география']];
 
 const App: React.FC = () => {
+  const [screen, setScreen] = useState<'list' | 'detail'>('list');
   const [empId, setEmpId] = useState('petrova');
-  const [period, setPeriod] = useState('week');
+  const [tab, setTab] = useState<TabId>('timeline');
+  const [period, setPeriod] = useState('today');
   const [customFrom, setCustomFrom] = useState(ymd(dayOffset(6)));
   const [customTo, setCustomTo] = useState(ymd(dayOffset(0)));
-  const [types, setTypes] = useState<ActionType[]>([]);
   const [onlySusp, setOnlySusp] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [tab, setTab] = useState<'feed' | 'timeline' | 'geo'>('timeline');
-  const [tlRange, setTlRange] = useState<'week' | 'month'>('week');
-  const [tlScope, setTlScope] = useState<'one' | 'team'>('one');
+  const [teamRange, setTeamRange] = useState<'week' | 'month'>('week');
 
   const emp = EMPLOYEES.find((e) => e.id === empId)!;
   const toggleCheck = (id: string) => setChecked((prev) => {
@@ -593,22 +555,47 @@ const App: React.FC = () => {
 
   const range = useMemo<[Date, Date]>(() => {
     if (period === 'today') return [dayOffset(0), NOW];
-    if (period === 'yesterday') return [dayOffset(1), dayOffset(0)];
+    if (period === 'yesterday') return [dayOffset(1), new Date(dayOffset(0).getTime() - 1)];
     if (period === 'week') return [dayOffset(6), NOW];
     if (period === 'month') return [dayOffset(29), NOW];
     return [new Date(customFrom + 'T00:00:00'), new Date(customTo + 'T23:59:59')];
   }, [period, customFrom, customTo]);
 
-  const periodLabel = PERIODS.find(([v]) => v === period)?.[1] || `${dmy(range[0])} — ${dmy(range[1])}`;
+  const weekRange = useMemo<[Date, Date]>(() => [dayOffset(6), NOW], []);
 
-  const filtered = useMemo(() => {
+  const openEmployee = (id: string) => {
+    setEmpId(id);
+    setScreen('detail');
+    setTab('timeline');
+    setPeriod('today');
+    setOnlySusp(false);
+  };
+
+  const goToFromBell = (id: string) => {
+    setEmpId(id);
+    setScreen('detail');
+    setTab('feed');
+    setOnlySusp(true);
+    setPeriod('month');
+  };
+
+  /* данные пай-чарта в зависимости от вкладки */
+  const slices = useMemo<Slice[]>(() => {
     const [from, to] = range;
-    return emp.actions
-      .filter((a) => a.date >= from && a.date <= to)
-      .filter((a) => !types.length || types.includes(a.type))
-      .filter((a) => !onlySusp || !!a.susp)
-      .sort((a, b) => b.t - a.t);
-  }, [emp, range, types, onlySusp]);
+    if (tab === 'timeline') {
+      return timeByType(emp, from, to).map((s) => ({
+        label: TYPE_LABEL[s.type], value: fmtH(s.hours), share: s.share, color: TYPE_COLOR[s.type],
+      }));
+    }
+    if (tab === 'feed') {
+      return typeShares(emp, from, to).map((s) => ({
+        label: TYPE_LABEL[s.type], value: `${s.cnt} ${plural(s.cnt, 'действие', 'действия', 'действий')}`, share: s.share, color: TYPE_COLOR[s.type],
+      }));
+    }
+    return cityShares(emp, from, to).map((s, i) => ({
+      label: s.city, value: `${s.cnt} ${plural(s.cnt, 'вход', 'входа', 'входов')}`, share: s.share, color: PALETTE[i % PALETTE.length],
+    }));
+  }, [emp, tab, range]);
 
   const suspStats = useMemo(() => {
     const [from, to] = range;
@@ -622,6 +609,14 @@ const App: React.FC = () => {
     return { total, unviewed };
   }, [emp, range, checked]);
 
+  const filtered = useMemo(() => {
+    const [from, to] = range;
+    return emp.actions
+      .filter((a) => a.date >= from && a.date <= to)
+      .filter((a) => !onlySusp || !!a.susp)
+      .sort((a, b) => b.t - a.t);
+  }, [emp, range, onlySusp]);
+
   const groups = useMemo(() => {
     const m = new Map<string, { date: Date; items: Action[] }>();
     filtered.forEach((a) => {
@@ -631,13 +626,6 @@ const App: React.FC = () => {
     });
     return [...m.values()];
   }, [filtered]);
-
-  const goToFromBell = (id: string) => {
-    setEmpId(id);
-    setTab('feed');
-    setOnlySusp(true);
-    setPeriod('month');
-  };
 
   return (
     <div className="app-shell">
@@ -651,110 +639,112 @@ const App: React.FC = () => {
         avatarInitials="ИИ"
       />
       <div className="layout">
-        <Sidebar />
-        <main className="main">
-          <div className="page-head">
-            <NavigationBar
-              isAdaptive={false}
-              className="mon-nav"
-              title="Мониторинг действий сотрудников"
-              hasDescription={false}
-              hasBackButton={false}
-              hasActionButton={false}
-              hasRootLink={false}
-            />
-            <NotifBell
-              checked={checked}
-              onGoTo={goToFromBell}
-              onCheckAll={(ids) => setChecked((prev) => new Set([...prev, ...ids]))}
-            />
-          </div>
-
-          <EmployeeTable
-            range={range}
-            periodLabel={periodLabel}
-            empId={empId}
-            checked={checked}
-            onSelect={(id) => { setEmpId(id); setOnlySusp(false); }}
-          />
-
-          <div className="card mon-block">
-            <EmployeePanel emp={emp} range={range} periodLabel={periodLabel} checked={checked} />
-
-            <div className="mon-block__tabs">
-              <div className="tabsrow">
-                <Chip variant="tab" isSelected={tab === 'timeline'} onClick={() => setTab('timeline')}>Рабочее время</Chip>
-                <Chip variant="tab" isSelected={tab === 'feed'} onClick={() => setTab('feed')}>Журнал действий</Chip>
-                <Chip variant="tab" isSelected={tab === 'geo'} onClick={() => setTab('geo')}>IP и география</Chip>
+        {screen === 'list' ? (
+          <>
+            <Sidebar />
+            <main className="main">
+              <div className="page-head">
+                <NavigationBar
+                  isAdaptive={false}
+                  className="mon-nav"
+                  title="Мониторинг действий сотрудников"
+                  hasDescription={false}
+                  hasBackButton={false}
+                  hasActionButton={false}
+                  hasRootLink={false}
+                />
+                <NotifBell
+                  checked={checked}
+                  onGoTo={goToFromBell}
+                  onCheckAll={(ids) => setChecked((prev) => new Set([...prev, ...ids]))}
+                />
               </div>
-              {tab === 'timeline' && (
-                <div className="controls__group">
-                  <Chip variant="tab" isSelected={tlScope === 'one'} onClick={() => setTlScope('one')}>Сотрудник</Chip>
-                  <Chip variant="tab" isSelected={tlScope === 'team'} onClick={() => setTlScope('team')}>Вся команда</Chip>
-                  <span className="controls__sep" />
-                  <Chip variant="tab" isSelected={tlRange === 'week'} onClick={() => setTlRange('week')}>Неделя</Chip>
-                  <Chip variant="tab" isSelected={tlRange === 'month'} onClick={() => setTlRange('month')}>Месяц</Chip>
+              <EmployeeTable range={weekRange} checked={checked} onOpen={openEmployee} />
+              <TeamCard range={teamRange} onRange={setTeamRange} />
+            </main>
+          </>
+        ) : (
+          <>
+            <DetailRail onBack={() => setScreen('list')} />
+            <main className="main detail-main">
+              <h1 className="detail-name">{shortName(emp)} {emp.name.split(' ')[2] || ''}</h1>
+              <div className="detail-role ts-400-s">{emp.role} {emp.sign ? 'с правом подписи' : 'без права подписи'}</div>
+
+              <div className="text-tabs">
+                {TABS.map(([id, label]) => (
+                  <button key={id} className={'text-tab' + (tab === id ? ' active' : '')} onClick={() => setTab(id)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="card content-card filter-card">
+                <div className="controls detail-controls">
+                  {tab === 'feed' && (
+                    <>
+                      <button
+                        className={'susp-flag' + (onlySusp ? ' selected' : '') + (suspStats.unviewed ? ' alert' : '')}
+                        onClick={() => setOnlySusp((s) => !s)}
+                      >
+                        <Icon icon={<WarningTriangle />} size="xs" />
+                        <span className="ts-500-s">Подозрительные</span>
+                        {suspStats.total > 0 && (
+                          <span className={'flag-badge ts-500-xs' + (suspStats.unviewed ? ' flag-badge--alert' : '')}>
+                            {suspStats.unviewed || suspStats.total}
+                          </span>
+                        )}
+                      </button>
+                      <span className="controls__sep" />
+                    </>
+                  )}
+                  {PERIODS.map(([v, l]) => (
+                    <Chip key={v} variant="tab" isSelected={period === v} onClick={() => setPeriod(v)}>{l}</Chip>
+                  ))}
+                  <Chip variant="tab" isSelected={period === 'custom'} onClick={() => setPeriod('custom')}>Указать вручную</Chip>
+                  {period === 'custom' && (
+                    <div className="controls__group">
+                      <Icon icon={<Calendar />} size="s" color="var(--primitive-neutral-4)" />
+                      <input className="date-input" type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+                      <span style={{ color: 'var(--primitive-neutral-4)' }}>—</span>
+                      <input className="date-input" type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+                    </div>
+                  )}
+                </div>
+                {slices.length === 0
+                  ? <div className="empty ts-400-m">Нет данных за выбранный период</div>
+                  : <BigDonut slices={slices} />}
+              </div>
+
+              {tab === 'feed' && (
+                <div className="card content-card">
+                  <div className="feed-head ts-600-m">
+                    {filtered.length} {plural(filtered.length, 'действие', 'действия', 'действий')}
+                  </div>
+                  {groups.length === 0 ? (
+                    <div className="empty ts-400-m">За выбранный период действий не найдено</div>
+                  ) : (
+                    groups.map((g, i) => (
+                      <div key={i}>
+                        <div className="day-head ts-500-s">{dayHead(g.date)}</div>
+                        {g.items.map((a) => (
+                          <ActionRow
+                            key={a.id}
+                            a={a}
+                            isChecked={checked.has(a.id)}
+                            onToggleCheck={toggleCheck}
+                          />
+                        ))}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
-            </div>
-            {tab === 'feed' ? (
-              <>
-                <div className="controls">
-                  <button
-                    className={'susp-flag' + (onlySusp ? ' selected' : '') + (suspStats.unviewed ? ' alert' : '')}
-                    onClick={() => setOnlySusp((s) => !s)}
-                  >
-                    <Icon icon={<WarningTriangle />} size="xs" />
-                    <span className="ts-500-s">Подозрительные</span>
-                    {suspStats.total > 0 && (
-                      <span className={'flag-badge ts-500-xs' + (suspStats.unviewed ? ' flag-badge--alert' : '')}>
-                        {suspStats.unviewed || suspStats.total}
-                      </span>
-                    )}
-                  </button>
-                  <span className="controls__sep" />
-                  <div className="controls__group">
-                    {PERIODS.map(([v, l]) => (
-                      <Chip key={v} variant="tab" isSelected={period === v} onClick={() => setPeriod(v)}>{l}</Chip>
-                    ))}
-                  </div>
-                  <div className="controls__group">
-                    <Icon icon={<Calendar />} size="s" color="var(--primitive-neutral-4)" />
-                    <input className="date-input" type="date" value={customFrom} onChange={(e) => { setCustomFrom(e.target.value); setPeriod('custom'); }} />
-                    <span style={{ color: 'var(--primitive-neutral-4)' }}>—</span>
-                    <input className="date-input" type="date" value={customTo} onChange={(e) => { setCustomTo(e.target.value); setPeriod('custom'); }} />
-                  </div>
-                  <div className="controls__spacer" />
-                  <TypeFilter selected={types} onChange={setTypes} />
-                </div>
-
-                {groups.length === 0 ? (
-                  <div className="empty ts-400-m">За выбранный период действий не найдено</div>
-                ) : (
-                  groups.map((g, i) => (
-                    <div key={i}>
-                      <div className="day-head ts-500-s">{dayHead(g.date)}</div>
-                      {g.items.map((a) => (
-                        <ActionRow
-                          key={a.id}
-                          a={a}
-                          isChecked={checked.has(a.id)}
-                          onToggleCheck={toggleCheck}
-                        />
-                      ))}
-                    </div>
-                  ))
-                )}
-              </>
-            ) : tab === 'timeline' ? (
-              tlScope === 'one'
-                ? <TimelineBody emp={emp} range={tlRange} />
-                : <TeamBoard range={tlRange} />
-            ) : (
-              <GeoBody emp={emp} />
-            )}
-          </div>
-        </main>
+              {tab === 'timeline' && <TimelineGrid emp={emp} range={range} />}
+              {tab === 'geo' && <GeoTable emp={emp} range={range} />}
+            </main>
+            <ActionRail />
+          </>
+        )}
       </div>
     </div>
   );

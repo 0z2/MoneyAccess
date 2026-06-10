@@ -282,6 +282,46 @@ export function typeShares(e: Employee, from: Date, to: Date): { type: ActionTyp
     .sort((a, b) => b.cnt - a.cnt);
 }
 
+/* ===== Распределение времени по типам занятий (для пай-чарта «Рабочее время») ===== */
+export function timeByType(e: Employee, from: Date, to: Date): { type: ActionType; hours: number; share: number }[] {
+  const rows = buildSegments(e.actions, 30);
+  const acc = new Map<ActionType, number>();
+  let total = 0;
+  rows.forEach((r) => {
+    if (r.date < from || r.date > to) return;
+    r.segs.forEach((s) => {
+      const d = s.end - s.start;
+      acc.set(s.type, (acc.get(s.type) || 0) + d);
+      total += d;
+    });
+  });
+  if (!total) return [];
+  return TYPE_ORDER
+    .filter((t) => acc.get(t))
+    .map((t) => ({ type: t, hours: acc.get(t)!, share: acc.get(t)! / total }))
+    .sort((a, b) => b.hours - a.hours);
+}
+
+/* ===== Входы по городам (для пай-чарта «IP и география») ===== */
+export function cityShares(e: Employee, from: Date, to: Date): { city: string; cnt: number; share: number }[] {
+  const logins = e.actions.filter((a) => a.type === 'auth' && a.ip && a.date >= from && a.date <= to);
+  const acc = new Map<string, number>();
+  logins.forEach((l) => acc.set(l.city!, (acc.get(l.city!) || 0) + 1));
+  const total = logins.length;
+  if (!total) return [];
+  return [...acc.entries()]
+    .map(([city, cnt]) => ({ city, cnt, share: cnt / total }))
+    .sort((a, b) => b.cnt - a.cnt);
+}
+
+/* ===== Склонение ===== */
+export function plural(n: number, one: string, few: string, many: string) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+
 /* ===== Таймлайн: кластеризация активности по дням, с разбивкой по типам занятий ===== */
 export interface Segment { start: number; end: number; cnt: number; susp: number; type: ActionType; }
 export interface DayRow { date: Date; segs: Segment[]; }
