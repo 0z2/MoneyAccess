@@ -4,18 +4,17 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html, body { margin: 0; height: 100%; }
+html, body { margin: 0; min-height: 100%; }
 body {
   background: var(--bg-neutral-1);
   color: var(--primitive-primary);
   font-family: var(--font-family-tt-norms-tochka-extended);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
 }
 
-#root { height: 100vh; }
-.app-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+#root { min-height: 100vh; }
+.app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 .main-page-navigation-bar { flex: 0 0 auto; }
 
 /* Иконки — заполнять текущим цветом и тянуться под размер обёртки */
@@ -27,10 +26,9 @@ button { font-family: inherit; cursor: pointer; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* ===== Layout ===== */
-.layout { display: flex; align-items: stretch; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.layout { display: flex; align-items: stretch; flex: 1 1 auto; }
 .sidebar {
   width: 264px; flex-shrink: 0; padding: var(--spacing-6x) var(--spacing-4x);
-  overflow-y: auto;
 }
 .sidebar__title {
   font-size: var(--font-size-xs, 12px); text-transform: uppercase; letter-spacing: .04em;
@@ -45,10 +43,9 @@ button { font-family: inherit; cursor: pointer; }
 .nav-item.active { background: var(--bg-brand-1); color: var(--primitive-brand); }
 .nav-item__ico { color: inherit; }
 
-/* Закреплены только шапка и сайдбар; основная область (карточки, фильтры, лента) скроллится */
+/* Страница скроллится целиком — контент и панель действий вместе */
 .main { flex: 1; min-width: 0; max-width: 1240px;
-  padding: var(--spacing-6x) var(--spacing-8x) var(--spacing-12x);
-  overflow-y: auto; }
+  padding: var(--spacing-6x) var(--spacing-8x) var(--spacing-12x); }
 
 /* Блок-контейнер на базе Widget из дизайн-системы */
 .mon-widget { overflow: visible; }
@@ -163,8 +160,9 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ===== Большой пай-чарт ===== */
 .pie-wrap {
-  display: flex; align-items: center; justify-content: center;
-  gap: var(--spacing-16x); padding: var(--spacing-6x) var(--spacing-5x) var(--spacing-8x);
+  display: flex; align-items: center; justify-content: flex-start;
+  gap: var(--spacing-20x, 80px);
+  padding: var(--spacing-6x) var(--spacing-5x) var(--spacing-8x) var(--spacing-12x);
 }
 .pie-label { font-size: 13px; font-weight: 500; fill: #1f2937; font-family: inherit; }
 .pie-legend { display: flex; flex-direction: column; gap: var(--spacing-4x); }
@@ -247,8 +245,8 @@ button { font-family: inherit; cursor: pointer; }
 .act-right { display: flex; align-items: center; justify-content: flex-end; gap: var(--spacing-3x); }
 .act-meta { display: inline-flex; align-items: center; gap: var(--spacing-3x); }
 .act-mark { display: none; }
-.act-row:hover .act-meta { display: none; }
-.act-row:hover .act-mark { display: inline-flex; }
+.act-row.susp:hover .act-meta { display: none; }
+.act-row.susp:hover .act-mark { display: inline-flex; }
 .act-time { color: var(--primitive-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .act-reason-line {
   display: flex; align-items: center; gap: 6px; color: #8a6d12;
