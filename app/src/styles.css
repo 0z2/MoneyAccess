@@ -123,7 +123,7 @@ button { font-family: inherit; cursor: pointer; }
 .detail-rail__crumb { color: var(--primitive-neutral-4); margin-bottom: var(--spacing-1x); }
 .detail-rail__title { line-height: 1.25; }
 
-.detail-main { max-width: 760px; }
+.detail-main { max-width: 820px; }
 .detail-name { margin: 0 0 var(--spacing-1x); font-size: 32px; line-height: 40px; font-weight: 700; }
 .detail-role { color: var(--primitive-secondary); margin-bottom: var(--spacing-6x); }
 
@@ -151,8 +151,14 @@ button { font-family: inherit; cursor: pointer; }
 .rail-btn--danger:hover { background: var(--bg-error-1, #fdecec); }
 
 .content-card { margin-bottom: var(--spacing-5x); overflow: hidden; }
-.filter-card .detail-controls { border-bottom: none; padding-bottom: 0; }
+.filter-card .detail-controls {
+  border-bottom: none; padding-bottom: 0;
+  flex-wrap: nowrap; gap: var(--spacing-1-5x);
+  padding-left: var(--spacing-4x); padding-right: var(--spacing-4x);
+}
 .filter-card--bare .detail-controls { padding-bottom: var(--spacing-4x); }
+.detail-controls .susp-flag { padding: var(--spacing-2x) var(--spacing-2-5x); flex-shrink: 0; }
+.detail-controls .controls__sep { margin: 0 var(--spacing-1x); }
 .feed-head { padding: var(--spacing-5x) var(--spacing-5x) 0; }
 
 /* ===== Большой пай-чарт ===== */
