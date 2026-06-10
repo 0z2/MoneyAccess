@@ -109,6 +109,31 @@ button { font-family: inherit; cursor: pointer; }
 /* Подзаголовок виджета — связь с выбранным сотрудником */
 .widget-emp { color: var(--primitive-secondary); }
 .widget-emp b { color: var(--primitive-primary); font-weight: 600; }
+.txt-alert { color: var(--primitive-error, #d43d3d); }
+
+/* ===== Панель выбранного сотрудника ===== */
+.emp-panel {
+  display: flex; align-items: center; gap: var(--spacing-4x);
+  padding: var(--spacing-4x) var(--spacing-5x); margin-bottom: var(--spacing-6x);
+}
+.emp-panel__id { display: flex; align-items: center; gap: var(--spacing-3x); min-width: 190px; flex-shrink: 0; }
+.emp-panel__cap { color: var(--primitive-brand); text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
+.emp-panel__col { padding-left: var(--spacing-4x); border-left: 1px solid var(--bg-neutral-2); min-width: 0; flex: 1 1 0; }
+.emp-panel__lbl { color: var(--primitive-secondary); margin-bottom: var(--spacing-1x); }
+.emp-panel__col.emp-panel__donut { flex: 0 0 auto; }
+.emp-panel__donut { flex-shrink: 0; }
+.emp-panel__actions {
+  margin-left: auto; display: flex; flex-direction: column; align-items: stretch;
+  gap: var(--spacing-2x); flex-shrink: 0;
+}
+
+.donut-wrap { display: flex; align-items: center; gap: var(--spacing-3x); }
+.donut-num { font-size: 15px; font-weight: 600; fill: var(--primitive-primary); font-family: inherit; }
+.donut-cap { font-size: 8px; fill: var(--primitive-secondary); font-family: inherit; }
+.donut-legend { display: flex; flex-direction: column; gap: 3px; }
+.donut-legend__row { display: flex; align-items: center; gap: 6px; color: var(--primitive-secondary); white-space: nowrap; }
+.donut-legend__row i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.donut-legend__row b { color: var(--primitive-primary); font-weight: 600; margin-left: 2px; }
 
 /* ===== Tabs row ===== */
 .tabsrow { display: flex; gap: var(--spacing-2x); margin-bottom: var(--spacing-4x); }
