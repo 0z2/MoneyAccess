@@ -16,7 +16,7 @@ import {
 import {
   EMPLOYEES, TYPE_LABEL, NOW, WD,
   dayOffset, ymd, dmy, hm, hmFloat, dayHead, buildSegments, loginsOf, summarize,
-  typeShares, timeByType, cityShares, plural, rub,
+  timeByType, plural, rub,
   type Action, type ActionType, type Employee,
 } from './data';
 
@@ -39,8 +39,6 @@ const TYPE_COLOR: Record<ActionType, string> = {
   export: '#C9A7E2',
   settings: '#9AA6B5',
 };
-const PALETTE = ['#8FACE0', '#E2917E', '#95C5A0', '#EE8E98', '#C9A7E2', '#9AA6B5'];
-
 const fmtH = (h: number) => `${Math.floor(h)}ч ${Math.round((h % 1) * 60)}мин`;
 const shortName = (e: Employee) => e.name.split(' ').slice(0, 2).join(' ');
 
@@ -586,20 +584,13 @@ const App: React.FC = () => {
     setPeriod('month');
   };
 
-  /* данные пай-чарта в зависимости от вкладки (на «Действиях» пая нет — только лог) */
+  /* пай-чарт — только на «Рабочем времени» */
   const slices = useMemo<Slice[]>(() => {
     const [from, to] = range;
-    if (tab === 'timeline') {
-      return timeByType(emp, from, to).map((s) => ({
-        label: TYPE_LABEL[s.type], value: fmtH(s.hours), share: s.share, color: TYPE_COLOR[s.type],
-      }));
-    }
-    if (tab === 'geo') {
-      return cityShares(emp, from, to).map((s, i) => ({
-        label: s.city, value: `${s.cnt} ${plural(s.cnt, 'вход', 'входа', 'входов')}`, share: s.share, color: PALETTE[i % PALETTE.length],
-      }));
-    }
-    return [];
+    if (tab !== 'timeline') return [];
+    return timeByType(emp, from, to).map((s) => ({
+      label: TYPE_LABEL[s.type], value: fmtH(s.hours), share: s.share, color: TYPE_COLOR[s.type],
+    }));
   }, [emp, tab, range]);
 
   const suspStats = useMemo(() => {
@@ -683,7 +674,7 @@ const App: React.FC = () => {
                 ))}
               </div>
 
-              <div className={'card content-card filter-card' + (tab === 'feed' ? ' filter-card--bare' : '')}>
+              <div className={'card content-card filter-card' + (tab !== 'timeline' ? ' filter-card--bare' : '')}>
                 <div className="controls detail-controls">
                   {tab === 'feed' && (
                     <>
@@ -715,7 +706,7 @@ const App: React.FC = () => {
                     </div>
                   )}
                 </div>
-                {tab !== 'feed' && (
+                {tab === 'timeline' && (
                   slices.length === 0
                     ? <div className="empty ts-400-m">Нет данных за выбранный период</div>
                     : <BigDonut slices={slices} />
