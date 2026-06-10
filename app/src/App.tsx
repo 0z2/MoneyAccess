@@ -633,6 +633,12 @@ const App: React.FC = () => {
     }));
   }, [emp, tab, range]);
 
+  /* непросмотренные риски сотрудника — каунтер на вкладке «Действия», не зависит от периода */
+  const empUnviewed = useMemo(
+    () => emp.actions.filter((a) => a.susp && !checked.has(a.id)).length,
+    [emp, checked],
+  );
+
   const suspStats = useMemo(() => {
     const [from, to] = range;
     let total = 0, unviewed = 0;
@@ -710,6 +716,7 @@ const App: React.FC = () => {
                 {TABS.map(([id, label]) => (
                   <button key={id} className={'text-tab' + (tab === id ? ' active' : '')} onClick={() => setTab(id)}>
                     {label}
+                    {id === 'feed' && empUnviewed > 0 && <span className="tab-badge ts-500-xs">{empUnviewed}</span>}
                   </button>
                 ))}
               </div>

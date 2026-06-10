@@ -132,6 +132,12 @@ button { font-family: inherit; cursor: pointer; }
 }
 .text-tab:hover { color: var(--primitive-secondary); }
 .text-tab.active { color: var(--primitive-primary); }
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px; margin-left: 8px;
+  border-radius: 11px; background: var(--primitive-error, #d43d3d); color: #fff;
+  vertical-align: 3px;
+}
 
 .action-rail {
   width: 280px; flex-shrink: 0; padding: var(--spacing-12x) var(--spacing-6x) 0 0;
