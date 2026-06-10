@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   MainPageNavigationBar,
   NavigationBar,
-  Widget,
   Avatar,
   Cell,
   Chip,
@@ -193,7 +192,7 @@ const EmployeePanel: React.FC<{ emp: Employee; range: [Date, Date]; periodLabel:
   const shares = useMemo(() => typeShares(emp, range[0], range[1]), [emp, range]);
   const total = shares.reduce((s, x) => s + x.cnt, 0);
   return (
-    <div className="card emp-panel">
+    <div className="emp-panel">
       <div className="emp-panel__id">
         <Avatar
           label={emp.initials} size="l" shape="superellipse"
@@ -591,7 +590,7 @@ const App: React.FC = () => {
   const [types, setTypes] = useState<ActionType[]>([]);
   const [onlySusp, setOnlySusp] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [tab, setTab] = useState<'feed' | 'timeline' | 'geo'>('feed');
+  const [tab, setTab] = useState<'feed' | 'timeline' | 'geo'>('timeline');
   const [tlRange, setTlRange] = useState<'week' | 'month'>('week');
   const [tlScope, setTlScope] = useState<'one' | 'team'>('one');
 
@@ -687,17 +686,16 @@ const App: React.FC = () => {
             onSelect={(id) => { setEmpId(id); setOnlySusp(false); }}
           />
 
-          <EmployeePanel emp={emp} range={range} periodLabel={periodLabel} checked={checked} />
+          <div className="card mon-block">
+            <EmployeePanel emp={emp} range={range} periodLabel={periodLabel} checked={checked} />
 
-          <Widget
-            className="mon-widget"
-            contentClassName="mon-content"
-            hasChevron={false}
-            hasDescription
-            description={<span className="widget-emp ts-400-xs">Сотрудник: <b>{emp.name.split(' ').slice(0, 2).join(' ')}</b> · {emp.role}</span>}
-            hasRightAccessory={tab === 'timeline'}
-            rightAccessory={
-              tab === 'timeline' ? (
+            <div className="mon-block__tabs">
+              <div className="tabsrow">
+                <Chip variant="tab" isSelected={tab === 'timeline'} onClick={() => setTab('timeline')}>Рабочее время</Chip>
+                <Chip variant="tab" isSelected={tab === 'feed'} onClick={() => setTab('feed')}>Журнал действий</Chip>
+                <Chip variant="tab" isSelected={tab === 'geo'} onClick={() => setTab('geo')}>IP и география</Chip>
+              </div>
+              {tab === 'timeline' && (
                 <div className="controls__group">
                   <Chip variant="tab" isSelected={tlScope === 'one'} onClick={() => setTlScope('one')}>Сотрудник</Chip>
                   <Chip variant="tab" isSelected={tlScope === 'team'} onClick={() => setTlScope('team')}>Вся команда</Chip>
@@ -705,16 +703,8 @@ const App: React.FC = () => {
                   <Chip variant="tab" isSelected={tlRange === 'week'} onClick={() => setTlRange('week')}>Неделя</Chip>
                   <Chip variant="tab" isSelected={tlRange === 'month'} onClick={() => setTlRange('month')}>Месяц</Chip>
                 </div>
-              ) : undefined
-            }
-            title={
-              <div className="tabsrow">
-                <Chip variant="tab" isSelected={tab === 'feed'} onClick={() => setTab('feed')}>Лента действий</Chip>
-                <Chip variant="tab" isSelected={tab === 'timeline'} onClick={() => setTab('timeline')}>Рабочее время</Chip>
-                <Chip variant="tab" isSelected={tab === 'geo'} onClick={() => setTab('geo')}>IP и география</Chip>
-              </div>
-            }
-          >
+              )}
+            </div>
             {tab === 'feed' ? (
               <>
                 <div className="controls">
@@ -771,7 +761,7 @@ const App: React.FC = () => {
             ) : (
               <GeoBody emp={emp} />
             )}
-          </Widget>
+          </div>
         </main>
       </div>
     </div>

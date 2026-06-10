@@ -111,10 +111,19 @@ button { font-family: inherit; cursor: pointer; }
 .widget-emp b { color: var(--primitive-primary); font-weight: 600; }
 .txt-alert { color: var(--primitive-error, #d43d3d); }
 
-/* ===== Панель выбранного сотрудника ===== */
+/* ===== Единый блок выбранного сотрудника ===== */
+.mon-block { overflow: visible; padding-bottom: var(--spacing-2x); }
+.mon-block__tabs {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-4x);
+  flex-wrap: wrap; padding: var(--spacing-4x) var(--spacing-5x) var(--spacing-2x);
+}
+.mon-block__tabs .tabsrow { margin-bottom: 0; }
+
+/* Панель выбранного сотрудника — шапка блока */
 .emp-panel {
   display: flex; align-items: center; gap: var(--spacing-4x);
-  padding: var(--spacing-4x) var(--spacing-5x); margin-bottom: var(--spacing-6x);
+  padding: var(--spacing-4x) var(--spacing-5x);
+  border-bottom: 1px solid var(--bg-neutral-2);
 }
 .emp-panel__id { display: flex; align-items: center; gap: var(--spacing-3x); min-width: 190px; flex-shrink: 0; }
 .emp-panel__cap { color: var(--primitive-brand); text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
