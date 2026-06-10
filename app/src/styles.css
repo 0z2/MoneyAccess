@@ -152,6 +152,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .content-card { margin-bottom: var(--spacing-5x); overflow: hidden; }
 .filter-card .detail-controls { border-bottom: none; padding-bottom: 0; }
+.filter-card--bare .detail-controls { padding-bottom: var(--spacing-4x); }
 .feed-head { padding: var(--spacing-5x) var(--spacing-5x) 0; }
 
 /* ===== Большой пай-чарт ===== */

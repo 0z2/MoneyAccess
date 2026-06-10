@@ -168,37 +168,44 @@ const EmployeeTable: React.FC<{
 /* ===== Большой пай-чарт с легендой ===== */
 interface Slice { label: string; value: string; share: number; color: string }
 const BigDonut: React.FC<{ slices: Slice[] }> = ({ slices }) => {
-  const SIZE = 230, CX = SIZE / 2, R = 70, SW = 54;
-  const C = 2 * Math.PI * R;
-  let acc = 0;
+  const SIZE = 230, CX = SIZE / 2, RO = 97, RI = 43, RL = (RO + RI) / 2;
+  const pt = (r: number, a: number) => `${CX + r * Math.cos(a)} ${CX + r * Math.sin(a)}`;
+  let acc = -Math.PI / 2;
   const labels: { x: number; y: number; text: string }[] = [];
-  const circles = slices.map((s) => {
-    const dash = s.share * C;
-    const mid = ((acc + dash / 2) / C) * 2 * Math.PI - Math.PI / 2;
+  const wedges = slices.map((s) => {
+    const a0 = acc;
+    const a1 = acc + s.share * 2 * Math.PI;
+    acc = a1;
+    const mid = (a0 + a1) / 2;
     if (s.share >= 0.07) {
       labels.push({
-        x: CX + R * Math.cos(mid),
-        y: CX + R * Math.sin(mid) + 4,
+        x: CX + RL * Math.cos(mid),
+        y: CX + RL * Math.sin(mid) + 4,
         text: `${Math.round(s.share * 100)}%`,
       });
     }
-    const el = (
-      <circle
-        key={s.label}
-        cx={CX} cy={CX} r={R} fill="none"
-        stroke={s.color} strokeWidth={SW}
-        strokeDasharray={`${dash} ${C - dash}`}
-        strokeDashoffset={-acc}
-        transform={`rotate(-90 ${CX} ${CX})`}
-      />
-    );
-    acc += dash;
-    return el;
+    // полный круг — секторный path вырождается, рисуем кольцо
+    if (s.share >= 0.999) {
+      return (
+        <g key={s.label}>
+          <circle cx={CX} cy={CX} r={(RO + RI) / 2} fill="none" stroke={s.color} strokeWidth={RO - RI} />
+        </g>
+      );
+    }
+    const large = s.share > 0.5 ? 1 : 0;
+    const d = [
+      `M ${pt(RO, a0)}`,
+      `A ${RO} ${RO} 0 ${large} 1 ${pt(RO, a1)}`,
+      `L ${pt(RI, a1)}`,
+      `A ${RI} ${RI} 0 ${large} 0 ${pt(RI, a0)}`,
+      'Z',
+    ].join(' ');
+    return <path key={s.label} d={d} fill={s.color} />;
   });
   return (
     <div className="pie-wrap">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {circles}
+        {wedges}
         {labels.map((l, i) => (
           <text key={i} x={l.x} y={l.y} textAnchor="middle" className="pie-label">{l.text}</text>
         ))}
@@ -579,7 +586,7 @@ const App: React.FC = () => {
     setPeriod('month');
   };
 
-  /* данные пай-чарта в зависимости от вкладки */
+  /* данные пай-чарта в зависимости от вкладки (на «Действиях» пая нет — только лог) */
   const slices = useMemo<Slice[]>(() => {
     const [from, to] = range;
     if (tab === 'timeline') {
@@ -587,14 +594,12 @@ const App: React.FC = () => {
         label: TYPE_LABEL[s.type], value: fmtH(s.hours), share: s.share, color: TYPE_COLOR[s.type],
       }));
     }
-    if (tab === 'feed') {
-      return typeShares(emp, from, to).map((s) => ({
-        label: TYPE_LABEL[s.type], value: `${s.cnt} ${plural(s.cnt, 'действие', 'действия', 'действий')}`, share: s.share, color: TYPE_COLOR[s.type],
+    if (tab === 'geo') {
+      return cityShares(emp, from, to).map((s, i) => ({
+        label: s.city, value: `${s.cnt} ${plural(s.cnt, 'вход', 'входа', 'входов')}`, share: s.share, color: PALETTE[i % PALETTE.length],
       }));
     }
-    return cityShares(emp, from, to).map((s, i) => ({
-      label: s.city, value: `${s.cnt} ${plural(s.cnt, 'вход', 'входа', 'входов')}`, share: s.share, color: PALETTE[i % PALETTE.length],
-    }));
+    return [];
   }, [emp, tab, range]);
 
   const suspStats = useMemo(() => {
@@ -678,7 +683,7 @@ const App: React.FC = () => {
                 ))}
               </div>
 
-              <div className="card content-card filter-card">
+              <div className={'card content-card filter-card' + (tab === 'feed' ? ' filter-card--bare' : '')}>
                 <div className="controls detail-controls">
                   {tab === 'feed' && (
                     <>
@@ -710,9 +715,11 @@ const App: React.FC = () => {
                     </div>
                   )}
                 </div>
-                {slices.length === 0
-                  ? <div className="empty ts-400-m">Нет данных за выбранный период</div>
-                  : <BigDonut slices={slices} />}
+                {tab !== 'feed' && (
+                  slices.length === 0
+                    ? <div className="empty ts-400-m">Нет данных за выбранный период</div>
+                    : <BigDonut slices={slices} />
+                )}
               </div>
 
               {tab === 'feed' && (
