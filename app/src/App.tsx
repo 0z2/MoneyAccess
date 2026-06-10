@@ -205,14 +205,6 @@ const EmployeePanel: React.FC<{ emp: Employee; range: [Date, Date]; periodLabel:
         </div>
       </div>
       <div className="emp-panel__col">
-        <div className="emp-panel__lbl ts-400-xs">Доступы к продуктам</div>
-        <div className="ts-500-s">{emp.products.join(', ')}</div>
-      </div>
-      <div className="emp-panel__col">
-        <div className="emp-panel__lbl ts-400-xs">Лимит на операцию</div>
-        <div className="ts-500-s">{emp.sign ? (emp.limit ? `до ${rub(emp.limit)}` : 'Без лимита') : '—'}</div>
-      </div>
-      <div className="emp-panel__col">
         <div className="emp-panel__lbl ts-400-xs">Сегодня</div>
         <div className="ts-500-s">
           {today.acts} действий{today.susp > 0 && <> · <span className={today.unviewed ? 'txt-alert' : ''}>рисков: {today.susp}</span></>}
