@@ -368,3 +368,76 @@ button { font-family: inherit; cursor: pointer; }
   .tl-stats { grid-template-columns: 1fr; }
   .emp-totals { flex-direction: column; gap: var(--spacing-1x); }
 }
+
+/* ===== Адаптив ===== */
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+
+  /* список: прячем сайдбар, ужимаем отступы */
+  .sidebar { display: none; }
+  .main { padding: var(--spacing-4x) var(--spacing-3x) var(--spacing-8x); max-width: 100%; }
+  .navigation-bar.mon-nav { margin-bottom: var(--spacing-4x); }
+
+  /* деталка: левая колонка становится строкой, панель действий уходит вниз */
+  .sidebar.detail-rail {
+    display: flex; flex-direction: row; align-items: center; gap: var(--spacing-3x);
+    width: auto; padding: var(--spacing-4x) var(--spacing-3x) 0;
+  }
+  .back-btn { margin-bottom: 0; flex-shrink: 0; }
+  .detail-rail__crumb { display: none; }
+  .detail-rail__title { font-size: 16px; }
+  .detail-main { max-width: 100%; }
+  .detail-name { font-size: 24px; line-height: 30px; }
+  .text-tabs { gap: var(--spacing-4x); flex-wrap: wrap; }
+  .text-tab { font-size: 17px; line-height: 24px; }
+  .action-rail {
+    width: 100%; padding: 0 var(--spacing-3x) var(--spacing-8x);
+  }
+  .rail-btn { border: 1px solid var(--bg-neutral-2); background: var(--bg-default); }
+  .rail-btn--danger { border-color: var(--bg-error-2, #f6c6c6); }
+
+  /* фильтры можно переносить */
+  .filter-card .detail-controls { flex-wrap: wrap; }
+
+  /* пай: колонкой и по центру */
+  .pie-wrap {
+    flex-direction: column; align-items: center; gap: var(--spacing-5x);
+    padding: var(--spacing-4x) var(--spacing-4x) var(--spacing-6x);
+  }
+  .pie-legend { width: 100%; max-width: 280px; }
+
+  /* таблицы и таймлайны — горизонтальный скролл вместо ломаной вёрстки */
+  .emp-table-card, .content-card { overflow-x: auto; }
+  .emp-table { min-width: 640px; }
+  .geo-table { min-width: 640px; }
+  .tl-grid { min-width: 560px; }
+  .team-row__lbl { width: 120px; }
+  .team-row__sum { width: 120px; }
+
+  /* строки ленты: прячем тег типа, оставляем время */
+  .act-right .tag-tint { display: none; }
+  .act-row .ds-cell { padding: var(--spacing-3x) var(--spacing-3x); }
+  .act-reason-line { padding-left: var(--spacing-3x); }
+
+  .bell-menu { min-width: 0; width: calc(100vw - 48px); max-width: 420px; }
+  .emp-table-head, .geo-head, .feed-head { padding-left: var(--spacing-4x); padding-right: var(--spacing-4x); }
+  .device-row { padding-left: var(--spacing-4x); padding-right: var(--spacing-4x); }
+  .device-row__last { display: none; }
+  .device-row__sub br { display: none; }
+}
+
+@media (max-width: 560px) {
+  /* таблица сотрудников: только сотрудник, платежи и риски */
+  .emp-table { min-width: 0; width: 100%; }
+  .emp-table th:nth-child(2), .emp-table td:nth-child(2),
+  .emp-table th:nth-child(3), .emp-table td:nth-child(3),
+  .emp-table th:nth-child(4), .emp-table td:nth-child(4) { display: none; }
+  .emp-table th, .emp-table td { padding: var(--spacing-3x) var(--spacing-3x); }
+
+  .tl-stats { padding: var(--spacing-4x) var(--spacing-4x) var(--spacing-1x); }
+  .stat { padding: var(--spacing-3x); }
+  .stat__val { font-size: 18px; }
+
+  .detail-controls .susp-flag .ts-500-s { display: none; } /* остаётся иконка с бейджем */
+  .act-time { font-size: 12px; }
+}
